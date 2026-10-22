@@ -5,6 +5,8 @@
 
 ![TripBlocks home](docs/screenshots/home.png)
 
+[30 秒 Demo 视频](docs/demo/tripblocks-demo.mp4)
+
 TripBlocks 是一个模块化的旅行计划台：把交通、住宿、体验、吃饭和留白做成可拖拽的「块」，让行程从一张待办清单变成可以呼吸的周计划。右侧的 **Wander** 接阿里云百炼 Managed Agent，实时读取当前计划；真正的酒店与景点库存由 **FlyAI / 飞猪** 提供。
 
 ## 核心体验
