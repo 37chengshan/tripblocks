@@ -1,0 +1,37 @@
+version: "1"
+
+providers:
+  bailian:
+    api_key: ${DASHSCOPE_API_KEY}
+    base_url: ${BAILIAN_BASE_URL}
+
+defaults:
+  provider: bailian
+
+environments:
+  dev-2:
+    name: dev
+    description: TripBlocks runtime
+    provider: bailian
+    config:
+      type: cloud
+      networking:
+        type: unrestricted
+
+vaults:
+  admin:
+    display_name: admin
+    credentials: []
+
+agents:
+  admin:
+    name: "1111"
+    description: "Trip planning agent"
+    model: auto
+    instructions: |
+      You are TripBlocks, a travel planning assistant.
+      Reply with structured JSON when asked.
+    environment: dev-2
+    vault: admin
+    tools:
+      builtin: [ bash, read, glob, grep, web_search, web_fetch ]

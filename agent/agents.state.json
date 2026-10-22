@@ -1,0 +1,84 @@
+{
+  "resources": [
+    {
+      "address": {
+        "type": "agent",
+        "name": "admin",
+        "provider": "bailian"
+      },
+      "remote_id": "agent_01M5GVRFSDMXNCE4QT4QD0B6FB",
+      "version": 3,
+      "content_hash": "b62a49adbc61c0db128f5f64f7c7d7593b63c38b6b6c270eb679b558546d7958",
+      "desired_hash": "b62a49adbc61c0db128f5f64f7c7d7593b63c38b6b6c270eb679b558546d7958",
+      "desired_comparable_hash": "ccd46f1cb76cb096a1af13347b94ca94bb03cf3ebc6653f5fa9facd310b7ee95",
+      "desired_readiness_baseline": {
+        "operational_hash": "5aa859419caed14aa1118f0d4b0e628e41e0990e7c7395e38c69fdb17057046d",
+        "description_hash": "ec55b0482c3720bac7c5d08e94656ccf9cc3aa3007cc19dcfa476849ab68ded0",
+        "metadata_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+      },
+      "remote_hash": "ccd46f1cb76cb096a1af13347b94ca94bb03cf3ebc6653f5fa9facd310b7ee95",
+      "remote_snapshot": {
+        "name": "1111",
+        "description": "Trip planning agent",
+        "model": "auto",
+        "instructions": "You are TripBlocks, a travel planning assistant.\nReply with structured JSON when asked.\n",
+        "tools": {
+          "builtin": [
+            "bash",
+            "read",
+            "glob",
+            "grep",
+            "web_search",
+            "web_fetch"
+          ]
+        }
+      },
+      "drift_paths": [],
+      "drift_status": "in_sync"
+    },
+    {
+      "address": {
+        "provider": "bailian",
+        "type": "vault",
+        "name": "admin"
+      },
+      "remote_id": "vlt_01M5GVKBMQZ3QB9XH3ZWS3N086",
+      "content_hash": "f8a0946e061e08471bed52aa700207fa480f01c61dd9f8cb2e1baa233d6164b3",
+      "desired_hash": "f8a0946e061e08471bed52aa700207fa480f01c61dd9f8cb2e1baa233d6164b3",
+      "desired_readiness_baseline": {
+        "operational_hash": "5758d10eb5c66272642e03f21003886d2ff522a444200b23ae2ceca59065725e",
+        "description_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "metadata_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+      },
+      "drift_status": "unchecked"
+    },
+    {
+      "address": {
+        "type": "environment",
+        "name": "dev-2",
+        "provider": "bailian"
+      },
+      "remote_id": "env_ZDBhMmRlY2FiODQwNDA2Mm",
+      "content_hash": "c799def960f05aeac0fc2ca46afdc300a533d580a69c87a2d29439d711e2a218",
+      "desired_hash": "c799def960f05aeac0fc2ca46afdc300a533d580a69c87a2d29439d711e2a218",
+      "desired_comparable_hash": "65a4093049e175dbf4813cc5602b249bf8310679fe6811af16f22a4e26542996",
+      "desired_readiness_baseline": {
+        "operational_hash": "14f67562e74683add1e6431158a83f49e12d358b254ac27f0e08b8a64bb94828",
+        "description_hash": "27e29fdbfe16046c43962e9883637e34a69fcf8a5f1208cb5caacd29102ddbe9",
+        "metadata_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+      },
+      "remote_hash": "65a4093049e175dbf4813cc5602b249bf8310679fe6811af16f22a4e26542996",
+      "remote_snapshot": {
+        "description": "TripBlocks runtime",
+        "config": {
+          "type": "cloud",
+          "networking": {
+            "type": "unrestricted"
+          }
+        }
+      },
+      "drift_paths": [],
+      "drift_status": "in_sync"
+    }
+  ]
+}
