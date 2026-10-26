@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TripBlocks — The Plan in the Itinerary</title>
+  <meta name="description" content="TripBlocks is a calmer way to plan a trip: move the week block by block, ground it in real FlyAI inventory, and ask an agent that reads the whole plan. 2026 Fliggy AI Travel Innovation Competition.">
+  <meta name="theme-color" content="#f1eadf">
+  <meta property="og:title" content="TripBlocks — The Plan in the Itinerary">
+  <meta property="og:description" content="A calm, block-based travel plan. Real rooms. Real tables. A quiet second opinion.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23f1eadf'/%3E%3Crect x='13' y='13' width='16' height='16' fill='%232c2024'/%3E%3Crect x='35' y='13' width='16' height='16' fill='%23a34a2a'/%3E%3Crect x='13' y='35' width='38' height='16' fill='%232c2024'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="landing.css">
+</head>
+<body>
+  <a class="skip-link" href="#story">Skip to the story</a>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="site-header" id="siteHeader">
+    <a class="brand" href="index.html" aria-label="TripBlocks home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>TripBlocks</span>
+    </a>
+    <p class="header-note"><span>Field note 01</span><span>Kansai, Japan</span></p>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="#story">Story</a>
+      <a href="#method">Method</a>
+      <a href="architecture.html">Architecture</a>
+      <a class="nav-demo" href="demo.html">Open demo <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-kicker">
+        <span class="rust">TripBlocks / Field note 01</span>
+        <span>A calmer way to plan a trip</span>
+        <span class="hide-small">2026 飞猪 AI 旅行创新大赛</span>
+      </div>
+
+      <div class="hero-stage">
+        <div class="hero-copy">
+          <h1 class="hero-title" id="hero-title" aria-label="The plan in the itinerary">
+            <span class="title-line title-line--1" data-split aria-hidden="true">THE PLAN</span>
+            <span class="title-line title-line--2" data-split aria-hidden="true">IN THE ITINERARY</span>
+          </h1>
+        </div>
+
+        <figure class="hero-media">
+          <svg class="route-field" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+            <defs>
+              <pattern id="hero-dots" width="28" height="28" patternUnits="userSpaceOnUse">
+                <circle cx="1.5" cy="1.5" r="1.5" fill="#2c2024" opacity=".22"/>
+              </pattern>
+              <linearGradient id="hero-wash" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#f1eadf" stop-opacity=".8"/>
+                <stop offset=".52" stop-color="#e7dccb" stop-opacity=".12"/>
+                <stop offset="1" stop-color="#f1eadf" stop-opacity=".72"/>
+              </linearGradient>
+              <filter id="hero-rough" x="-10%" y="-10%" width="120%" height="120%">
+                <feTurbulence type="fractalNoise" baseFrequency=".012" numOctaves="2" seed="7" result="noise"/>
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="7" xChannelSelector="R" yChannelSelector="G"/>
+              </filter>
+            </defs>
+            <rect width="1600" height="900" fill="#e7dccb"/>
+            <rect width="1600" height="900" fill="url(#hero-dots)" opacity=".7"/>
+            <g class="contour-lines" fill="none" stroke="#2c2024" stroke-width="1.1" opacity=".18">
+              <path d="M-80 720 C170 610 300 760 500 650 S760 430 960 500 S1180 690 1400 560 S1600 420 1740 470"/>
+              <path d="M-80 760 C180 650 310 800 510 690 S770 470 970 540 S1190 730 1410 600 S1610 460 1740 510"/>
+              <path d="M-80 800 C190 690 320 840 520 730 S780 510 980 580 S1200 770 1420 640 S1620 500 1740 550"/>
+              <path d="M-80 840 C200 730 330 880 530 770 S790 550 990 620 S1210 810 1430 680 S1630 540 1740 590"/>
+              <path d="M-80 360 C160 280 290 390 490 300 S730 130 930 190 S1160 360 1380 260 S1580 170 1740 220"/>
+              <path d="M-80 310 C170 230 300 340 500 250 S740 80 940 140 S1170 310 1390 210 S1590 120 1740 170"/>
+              <path d="M-80 260 C180 180 310 290 510 200 S750 30 950 90 S1180 260 1400 160 S1600 70 1740 120"/>
+            </g>
+            <g class="orbital-lines" fill="none" stroke="#8e3d22" opacity=".36">
+              <circle cx="1190" cy="310" r="360" stroke-width=".8" stroke-dasharray="1 9"/>
+              <circle cx="1190" cy="310" r="255" stroke-width="1.1" opacity=".72"/>
+              <circle cx="1190" cy="310" r="152" stroke-width=".8" stroke-dasharray="3 7"/>
+            </g>
+            <g class="route-field__route" fill="none" stroke="#8e3d22" stroke-linecap="round" stroke-linejoin="round" filter="url(#hero-rough)">
+              <path class="route-path route-path--a" d="M80 735 C190 700 235 625 342 640 S510 770 610 690 S700 510 824 520 S986 650 1096 566 S1240 376 1370 396 S1510 470 1600 430" stroke-width="3.5"/>
+              <path class="route-path route-path--b" d="M90 585 C210 520 300 560 405 505 S565 350 690 390 S860 510 970 450 S1130 285 1260 300 S1430 360 1540 310" stroke-width="1.4" stroke-dasharray="2 8" opacity=".58"/>
+            </g>
+            <g class="route-dots" fill="#f1eadf" stroke="#8e3d22" stroke-width="2.5">
+              <circle cx="342" cy="640" r="8"/><circle cx="610" cy="690" r="5"/><circle cx="824" cy="520" r="9"/>
+              <circle cx="1096" cy="566" r="5"/><circle cx="1370" cy="396" r="8"/><circle cx="970" cy="450" r="5"/>
+            </g>
+            <g class="map-labels" fill="#2c2024" font-family="'IBM Plex Mono', monospace" font-size="12" letter-spacing="2.4">
+              <text x="330" y="612">KYOTO</text>
+              <text x="795" y="494">NARA</text>
+              <text x="1065" y="596">OSAKA</text>
+              <text x="1346" y="368">UJI</text>
+              <text x="1502" y="402">KIX</text>
+            </g>
+            <g class="map-rings" fill="none" stroke="#2c2024" stroke-width=".9" opacity=".35">
+              <circle cx="342" cy="640" r="23"/><circle cx="824" cy="520" r="26"/><circle cx="1370" cy="396" r="24"/>
+            </g>
+            <text x="88" y="135" fill="#2c2024" opacity=".12" font-family="'Bodoni Moda', serif" font-size="168" letter-spacing="-8">07</text>
+            <rect width="1600" height="900" fill="url(#hero-wash)"/>
+          </svg>
+          <figcaption><span>Fig. 01</span><span>The shape of a week / 34.5° N</span></figcaption>
+        </figure>
+
+        <div class="hero-cutout-wrap" aria-hidden="true">
+          <svg class="hero-cutout node-tree" viewBox="0 0 720 570" focusable="false">
+            <g class="node-tree__shadow" fill="none" stroke="#f1eadf" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" opacity=".92">
+              <path d="M360 552V430"/>
+              <path d="M360 448 C330 380 250 356 198 292"/>
+              <path d="M360 424 C340 330 300 250 282 176"/>
+              <path d="M360 410 C380 330 430 248 470 182"/>
+              <path d="M360 438 C430 380 500 340 548 288"/>
+              <path d="M360 468 C456 436 540 414 612 386"/>
+              <path d="M360 500 C446 500 530 500 600 486"/>
+              <path d="M360 520 C300 510 228 510 162 492"/>
+            </g>
+            <g class="node-tree__limbs" fill="none" stroke="#2c2024" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M360 552V430"/>
+              <path d="M360 448 C330 380 250 356 198 292"/>
+              <path d="M360 424 C340 330 300 250 282 176"/>
+              <path d="M360 410 C380 330 430 248 470 182"/>
+              <path d="M360 438 C430 380 500 340 548 288"/>
+              <path d="M360 468 C456 436 540 414 612 386"/>
+              <path d="M360 500 C446 500 530 500 600 486"/>
+              <path d="M360 520 C300 510 228 510 162 492"/>
+            </g>
+            <g class="node-tree__route" fill="none" stroke="#8e3d22" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 10">
+              <path d="M162 492 C230 420 208 350 282 176 C350 250 400 260 470 182 C510 280 500 330 548 288 C590 330 570 360 612 386"/>
+            </g>
+            <g class="node-tree__nodes">
+              <g transform="translate(360 430)"><circle r="29" fill="#f1eadf" stroke="#2c2024" stroke-width="8"/><circle r="10" fill="#8e3d22"/></g>
+              <g transform="translate(198 292)"><circle r="24" fill="#f1eadf" stroke="#2c2024" stroke-width="7"/><text y="5" text-anchor="middle">D1</text></g>
+              <g transform="translate(282 176)"><circle r="24" fill="#f1eadf" stroke="#2c2024" stroke-width="7"/><text y="5" text-anchor="middle">D2</text></g>
+              <g transform="translate(470 182)"><circle r="24" fill="#f1eadf" stroke="#2c2024" stroke-width="7"/><text y="5" text-anchor="middle">D3</text></g>
+              <g transform="translate(548 288)"><circle r="24" fill="#f1eadf" stroke="#2c2024" stroke-width="7"/><text y="5" text-anchor="middle">D4</text></g>
+              <g transform="translate(612 386)"><circle r="24" fill="#f1eadf" stroke="#2c2024" stroke-width="7"/><text y="5" text-anchor="middle">D5</text></g>
+              <g transform="translate(600 486)"><circle r="24" fill="#f1eadf" stroke="#2c2024" stroke-width="7"/><text y="5" text-anchor="middle">D6</text></g>
+              <g transform="translate(162 492)"><circle r="24" fill="#f1eadf" stroke="#2c2024" stroke-width="7"/><text y="5" text-anchor="middle">D7</text></g>
+            </g>
+            <g class="node-tree__pins" fill="#8e3d22">
+              <circle cx="142" cy="474" r="4"/><circle cx="268" cy="160" r="4"/><circle cx="486" cy="164" r="4"/>
+              <circle cx="566" cy="270" r="4"/><circle cx="630" cy="368" r="4"/><circle cx="618" cy="470" r="4"/>
+            </g>
+            <text x="392" y="556" fill="#2c2024" font-family="'IBM Plex Mono', monospace" font-size="11" letter-spacing="3">ROOT / KANSAI</text>
+          </svg>
+        </div>
+
+        <p class="hero-side-note" aria-hidden="true">Kansai / 07 days / 25 blocks</p>
+
+        <div class="hero-foot">
+          <div class="hero-deck reveal">
+            <p class="eyebrow">The premise</p>
+            <p class="hero-lede">Every trip has an elephant in the room: the plan itself. TripBlocks turns the week into blocks you can move — grounded in real rooms, real tables, and a quiet second opinion.</p>
+            <a class="text-link" href="demo.html">Enter the workbench <span aria-hidden="true">↗</span></a>
+          </div>
+          <a class="scroll-cue" href="#story"><span class="scroll-label">Scroll to unfold</span><span class="scroll-line" aria-hidden="true"></span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="story section" id="story">
+      <div class="section-label"><span>01 / The premise</span><span>Plan / in blocks</span></div>
+
+      <div class="story-grid">
+        <h2 class="display-m" data-split>The week is not a list.<br>It is a shape.</h2>
+        <div class="story-copy reveal">
+          <p class="lede">A seven-day trip is a living arrangement: a late night before an early train, a splurge before a quiet afternoon, a market crawl that eats the whole morning.</p>
+          <p>TripBlocks makes those tensions visible. Move a block and the cost, the route, and the pace move with it. No generated itinerary to accept or reject — just a plan you can keep editing.</p>
+          <a class="text-link" href="demo.html">Move a block <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+
+      <div class="pill-row">
+        <figure class="pill-card reveal">
+          <span class="pill">
+            <svg viewBox="0 0 360 360" aria-hidden="true" focusable="false">
+              <defs>
+                <pattern id="disc-one-dots" width="18" height="18" patternUnits="userSpaceOnUse">
+                  <circle cx="1" cy="1" r="1" fill="#2c2024" opacity=".22"/>
+                </pattern>
+              </defs>
+              <rect width="360" height="360" fill="#f1eadf"/>
+              <rect width="360" height="360" fill="url(#disc-one-dots)"/>
+              <g fill="none" stroke="#2c2024" opacity=".26">
+                <circle cx="180" cy="180" r="132" stroke-width=".8"/>
+                <circle cx="180" cy="180" r="104" stroke-width=".8" stroke-dasharray="2 7"/>
+                <circle cx="180" cy="180" r="66" stroke-width=".8"/>
+                <path d="M30 226 C86 206 106 154 158 162 S242 230 296 202 S336 148 356 154" stroke-width=".8"/>
+                <path d="M22 248 C84 228 108 176 160 184 S244 252 298 224 S338 170 358 176" stroke-width=".8"/>
+              </g>
+              <path d="M56 264 C104 250 106 194 158 188 S226 236 270 202 S314 116 338 104" fill="none" stroke="#8e3d22" stroke-width="2.6" stroke-linecap="round"/>
+              <g fill="#f1eadf" stroke="#8e3d22" stroke-width="2.2">
+                <circle cx="56" cy="264" r="7"/><circle cx="158" cy="188" r="5"/><circle cx="270" cy="202" r="7"/><circle cx="338" cy="104" r="5"/>
+              </g>
+              <g fill="#8e3d22">
+                <circle cx="196" cy="154" r="3"/><circle cx="238" cy="128" r="3"/><circle cx="112" cy="216" r="3"/>
+              </g>
+              <text x="32" y="326" fill="#8e3d22" font-family="'IBM Plex Mono', monospace" font-size="9" letter-spacing="2.6">ROUTE / 01</text>
+              <text x="328" y="326" fill="#2c2024" opacity=".5" font-family="'IBM Plex Mono', monospace" font-size="9" text-anchor="end">34.5° N</text>
+            </svg>
+          </span>
+          <figcaption><span class="pill-index">01</span><span>Rooms and tables that actually exist.</span></figcaption>
+        </figure>
+        <figure class="pill-card pill-card--offset reveal">
+          <span class="pill">
+            <svg viewBox="0 0 360 360" aria-hidden="true" focusable="false">
+              <defs>
+                <pattern id="disc-two-dots" width="24" height="24" patternUnits="userSpaceOnUse">
+                  <circle cx="1" cy="1" r="1" fill="#f1eadf" opacity=".18"/>
+                </pattern>
+              </defs>
+              <rect width="360" height="360" fill="#2c2024"/>
+              <rect width="360" height="360" fill="url(#disc-two-dots)"/>
+              <g fill="none" stroke="#f1eadf" opacity=".28">
+                <circle cx="180" cy="180" r="138" stroke-width=".8"/>
+                <circle cx="180" cy="180" r="96" stroke-width=".8" stroke-dasharray="3 9"/>
+                <circle cx="180" cy="180" r="54" stroke-width="1.1"/>
+                <path d="M20 200 C80 200 96 130 160 138 S248 214 306 168 S338 116 358 124" stroke-width=".8"/>
+                <path d="M20 226 C80 226 100 156 164 164 S252 240 310 194 S342 142 358 150" stroke-width=".8"/>
+              </g>
+              <g fill="none" stroke="#d18a68" stroke-width="2">
+                <path d="M54 270 L118 226 L176 250 L236 170 L300 188 L338 118"/>
+                <path d="M92 92 L148 142 L212 116 L268 158 L318 92" stroke-dasharray="2 8" opacity=".7"/>
+              </g>
+              <g fill="#f1eadf" stroke="#2c2024" stroke-width="2">
+                <circle cx="54" cy="270" r="6"/><circle cx="118" cy="226" r="6"/><circle cx="176" cy="250" r="6"/><circle cx="236" cy="170" r="6"/><circle cx="300" cy="188" r="6"/><circle cx="338" cy="118" r="6"/>
+              </g>
+              <g fill="#d18a68">
+                <circle cx="92" cy="92" r="4"/><circle cx="148" cy="142" r="4"/><circle cx="212" cy="116" r="4"/><circle cx="268" cy="158" r="4"/><circle cx="318" cy="92" r="4"/>
+              </g>
+              <text x="32" y="326" fill="#d18a68" font-family="'IBM Plex Mono', monospace" font-size="9" letter-spacing="2.6">ORBIT / 02</text>
+              <text x="328" y="326" fill="#f1eadf" opacity=".5" font-family="'IBM Plex Mono', monospace" font-size="9" text-anchor="end">07 DAYS</text>
+            </svg>
+          </span>
+          <figcaption><span class="pill-index">02</span><span>A second opinion that reads the whole week.</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="method section" id="method">
+      <div class="section-label"><span>02 / The method</span><span>Arrange / ground / ask</span></div>
+
+      <div class="method-head">
+        <h2 class="display-m" data-split>Arrange.<br>Ground. Ask.</h2>
+        <p class="lede reveal">Three moves, in this order. The board stays the hero; the intelligence stays beside it.</p>
+      </div>
+
+      <ol class="method-steps">
+        <li class="reveal">
+          <span class="step-index">01</span>
+          <div><h3>Arrange</h3><p>Drag a day, a stay, a long lunch. Edit the time, place, budget, and the note that tells you why it mattered. The week recomputes quietly.</p></div>
+          <span class="step-note">Drag / drop / edit</span>
+        </li>
+        <li class="reveal">
+          <span class="step-index">02</span>
+          <div><h3>Ground</h3><p>Open live options from FlyAI. Real hotels, real sights, real prices, real Fliggy links — then put one on the day it belongs to.</p></div>
+          <span class="step-note">FlyAI / Fliggy</span>
+        </li>
+        <li class="reveal">
+          <span class="step-index">03</span>
+          <div><h3>Ask</h3><p>Wander reads the full itinerary, not just the last message. It suggests one small move, with a reason. You decide whether it enters the plan.</p></div>
+          <span class="step-note">Managed Agent</span>
+        </li>
+      </ol>
+
+      <div class="plan-strip reveal" aria-label="A sample of the TripBlocks plan">
+        <span class="strip-rule" aria-hidden="true"></span>
+        <article class="plan-chip">
+          <span class="chip-meta">Day 01 / Fri 06</span>
+          <strong>Haruka to Kyoto</strong>
+          <span class="chip-foot"><span>09:40</span><span>75 min</span><span>¥2,400</span></span>
+        </article>
+        <article class="plan-chip">
+          <span class="chip-meta">Day 02 / Sat 07</span>
+          <strong>Tea ceremony</strong>
+          <span class="chip-foot"><span>14:00</span><span>90 min</span><span>¥6,000</span></span>
+        </article>
+        <article class="plan-chip">
+          <span class="chip-meta">Day 05 / Tue 10</span>
+          <strong>Dotonbori after dark</strong>
+          <span class="chip-foot"><span>18:30</span><span>150 min</span><span>¥7,600</span></span>
+        </article>
+        <article class="plan-chip plan-chip--blank">
+          <span class="chip-meta">Day 03 / Sun 08</span>
+          <strong>Free evening</strong>
+          <span class="chip-foot"><span>18:00</span><span>protected</span></span>
+        </article>
+        <p class="strip-caption">A working plan, not a generated one. <span>All figures in JPY.</span></p>
+      </div>
+    </section>
+
+    <section class="portrait-section section" id="second-opinion">
+      <div class="section-label"><span>03 / The second opinion</span><span>Wander / grounded</span></div>
+
+      <div class="portrait-grid">
+        <figure class="portrait-media reveal">
+          <svg class="trip-portrait" viewBox="0 0 600 900" aria-hidden="true" focusable="false">
+            <defs>
+              <pattern id="portrait-dots" width="26" height="26" patternUnits="userSpaceOnUse">
+                <circle cx="1" cy="1" r="1" fill="#f1eadf" opacity=".12"/>
+              </pattern>
+              <linearGradient id="portrait-wash" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#8e3d22" stop-opacity=".17"/>
+                <stop offset=".56" stop-color="#2c2024" stop-opacity="0"/>
+                <stop offset="1" stop-color="#8e3d22" stop-opacity=".11"/>
+              </linearGradient>
+            </defs>
+            <rect width="600" height="900" fill="#2c2024"/>
+            <rect width="600" height="900" fill="url(#portrait-dots)"/>
+            <g fill="none" stroke="#f1eadf" opacity=".13" stroke-width="1">
+              <path d="M-60 680 C80 590 130 700 240 620 S430 470 520 530 S650 660 720 590"/>
+              <path d="M-60 720 C86 630 140 740 250 660 S440 510 530 570 S660 700 720 630"/>
+              <path d="M-60 760 C92 670 150 780 260 700 S450 550 540 610 S670 740 720 670"/>
+              <path d="M-60 800 C98 710 160 820 270 740 S460 590 550 650 S680 780 720 710"/>
+              <path d="M-60 840 C104 750 170 860 280 780 S470 630 560 690 S690 820 720 750"/>
+              <path d="M-60 180 C90 110 180 220 300 150 S500 30 620 100"/>
+              <path d="M-60 220 C96 150 190 260 310 190 S510 70 620 140"/>
+            </g>
+            <g fill="none" stroke="#8e3d22" opacity=".55">
+              <circle cx="430" cy="300" r="235" stroke-width="1.1"/>
+              <circle cx="430" cy="300" r="174" stroke-width=".8" stroke-dasharray="2 9"/>
+              <circle cx="430" cy="300" r="112" stroke-width=".8"/>
+            </g>
+            <g fill="none" stroke="#d18a68" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M86 732 C126 660 158 688 190 626 S238 504 292 520 S360 626 410 578 S474 438 520 466" stroke-width="3"/>
+              <path d="M86 772 C130 700 164 728 196 666 S244 544 298 560 S366 666 416 618 S480 478 526 506" stroke-width="1" stroke-dasharray="2 9" opacity=".65"/>
+            </g>
+            <g class="portrait-route" fill="#f1eadf" stroke="#2c2024" stroke-width="2.5">
+              <circle cx="86" cy="732" r="9"/>
+              <circle cx="190" cy="626" r="6"/>
+              <circle cx="292" cy="520" r="10"/>
+              <circle cx="410" cy="578" r="6"/>
+              <circle cx="520" cy="466" r="9"/>
+            </g>
+            <g class="portrait-labels" fill="#f1eadf" font-family="'IBM Plex Mono', monospace" font-size="12" letter-spacing="2.2">
+              <text x="72" y="766">KYOTO</text>
+              <text x="166" y="604">NARA</text>
+              <text x="270" y="556">OSAKA</text>
+              <text x="434" y="612">UJI</text>
+              <text x="470" y="438">KIX</text>
+            </g>
+            <g fill="#d18a68">
+              <circle cx="330" cy="212" r="3"/><circle cx="488" cy="246" r="3"/><circle cx="512" cy="362" r="3"/>
+              <circle cx="132" cy="300" r="3"/><circle cx="208" cy="244" r="3"/>
+            </g>
+            <g fill="none" stroke="#f1eadf" opacity=".32">
+              <path d="M64 470 L118 418 L176 448 L236 384" stroke-width="1"/>
+              <path d="M64 496 L118 444 L176 474 L236 410" stroke-width="1" stroke-dasharray="2 7"/>
+            </g>
+            <text x="64" y="128" fill="#f1eadf" opacity=".9" font-family="'Bodoni Moda', serif" font-size="116" letter-spacing="-7">07</text>
+            <text x="70" y="170" fill="#d18a68" font-family="'IBM Plex Mono', monospace" font-size="10" letter-spacing="3.2">DAYS / ONE SHAPE</text>
+            <text x="510" y="820" fill="#f1eadf" opacity=".45" font-family="'IBM Plex Mono', monospace" font-size="9" letter-spacing="3" transform="rotate(-90 510 820)">KANSAI / 34.5° N</text>
+            <rect width="600" height="900" fill="url(#portrait-wash)"/>
+          </svg>
+          <figcaption><span>Fig. 02</span><span>A week, drawn as a route</span></figcaption>
+        </figure>
+
+        <div class="portrait-copy">
+          <h2 class="display-m" data-split>It reads the shape of the week.</h2>
+          <p class="lede reveal">Wander is not a chat window bolted onto a planner. It receives the compacted itinerary — days, times, costs, notes — and answers inside that context.</p>
+          <blockquote class="reveal">“Day 5 is doing three things in one day. Keep Kuromon, make the castle optional, and turn the evening into one standing counter. That buys you two hours and protects the Uji morning.”</blockquote>
+
+          <div class="transcript reveal">
+            <div class="transcript-meta"><span>Saved conversation / demo</span><span>Managed Agent · grounded</span></div>
+            <p class="transcript-prompt">Make Day 5 lighter.</p>
+            <p class="transcript-reply">Day 5 is doing three things in one day: a market, a castle, and Dotonbori at night. I would keep Kuromon, make the castle optional, and turn the evening into one standing counter instead of a full dinner. That buys you about two hours — and protects the Uji morning.</p>
+            <div class="suggestion-card">
+              <span class="suggestion-label">Suggested block</span>
+              <strong>One standing counter, no reservations</strong>
+              <span>Day 05 · 19:00 · 60 min · ¥3,200</span>
+            </div>
+            <p class="transcript-note">Read-only in this preview. The suggestion enters the plan only when you add it.</p>
+          </div>
+
+          <a class="text-link" href="architecture.html">How the agent is wired <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="facts section" id="facts">
+      <div class="section-label"><span>04 / Field facts</span><span>The current draft</span></div>
+      <div class="facts-grid">
+        <div class="fact reveal"><span class="fact-number">07</span><span class="fact-label">days in motion</span><p>Kyoto first, Nara as a day trip, one Osaka night, then Uji before the flight.</p></div>
+        <div class="fact reveal"><span class="fact-number">02</span><span class="fact-label">travellers</span><p>Enough for a counter seat, a shared plate, and two opinions about the castle.</p></div>
+        <div class="fact reveal"><span class="fact-number">¥260k</span><span class="fact-label">working budget</span><p>A real number that moves with every block, not a headline estimate.</p></div>
+        <div class="fact reveal"><span class="fact-number">01</span><span class="fact-label">protected pause</span><p>A free evening that stays free. The plan should have somewhere to breathe.</p></div>
+      </div>
+      <p class="facts-foot reveal">Managed Agent live after recharge <span class="dot"></span> FlyAI live <span class="dot"></span> Local-first by default</p>
+    </section>
+
+    <section class="closing" aria-labelledby="closing-title">
+      <div class="closing-glow" aria-hidden="true"></div>
+      <div class="section-label section-label--light"><span>05 / The invitation</span><span>TripBlocks / 2026</span></div>
+      <h2 class="closing-title" id="closing-title" aria-label="Plan in blocks. Travel in full.">
+        <span data-split aria-hidden="true">PLAN IN BLOCKS.</span>
+        <span data-split aria-hidden="true">TRAVEL IN FULL.</span>
+      </h2>
+      <div class="closing-actions reveal">
+        <a class="button button--light" href="demo.html">Open the demo workbench <span aria-hidden="true">↗</span></a>
+        <a class="button button--ghost" href="architecture.html">Read the architecture <span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="closing-meta reveal">
+        <a href="https://github.com/37chengshan/tripblocks" target="_blank" rel="noreferrer">GitHub repository <span aria-hidden="true">↗</span></a>
+        <a href="media/tripblocks-demo.mp4">Watch the 26-second film <span aria-hidden="true">↗</span></a>
+        <a href="https://github.com/37chengshan/tripblocks/blob/main/docs/COMPETITION.md" target="_blank" rel="noreferrer">Competition notes <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="brand brand--footer" href="index.html" aria-label="TripBlocks home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>TripBlocks</span>
+    </a>
+    <p>A calmer way to travel. One block at a time.</p>
+    <nav aria-label="Footer">
+      <a href="demo.html">Demo</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="https://github.com/37chengshan/tripblocks" target="_blank" rel="noreferrer">GitHub</a>
+      <a href="#top">Back to top ↑</a>
+    </nav>
+  </footer>
+
+  <script src="landing.js" defer></script>
+</body>
+</html>

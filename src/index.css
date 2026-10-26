@@ -2,23 +2,50 @@
 @import "tailwindcss";
 
 @theme {
-  --color-paper: #f1eee5;
-  --color-paper-deep: #e8e1d3;
-  --color-card: #fbf9f3;
-  --color-ink: #1e211d;
-  --color-muted: #6b6e64;
-  --color-faint: #96988e;
-  --color-line: #d9d2c3;
-  --color-clay: #bd6040;
-  --color-clay-soft: #f1ddd2;
-  --color-moss: #53624d;
-  --color-moss-soft: #e1e6d8;
-  --color-sky: #9db9c2;
-  --color-sky-soft: #e1ebed;
-  --color-sun: #dba64d;
-  --color-sun-soft: #f5e9cf;
+  /* Surfaces — four low-contrast steps, warm paper (CDS order: 0 sunken → 3 raised) */
+  --color-surface-0: #faf9f5;
+  --color-surface-1: #f2f0e8;
+  --color-surface-2: #fffdf9;
+  --color-surface-3: #ffffff;
+
+  /* Semantic aliases — every existing class keeps working */
+  --color-paper: var(--color-surface-0);
+  --color-paper-deep: #f0eee6;
+  --color-card: var(--color-surface-2);
+  --color-ink: #141413;
+  --color-muted: #5c5b55;
+  --color-faint: #7c7a72;
+  --color-line: #e4e0d5;
+  --color-hairline: #eae6dc;
+  --color-clay: #d97757;
+  --color-clay-deep: #b8593b;
+  --color-clay-soft: #f7e8e0;
+  --color-moss: #55684f;
+  --color-moss-soft: #e6ebdf;
+  --color-sky: #7f9fae;
+  --color-sky-soft: #e4eef1;
+  --color-sun: #c99a4b;
+  --color-sun-soft: #f4e8d2;
+
   --font-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-serif: "Instrument Serif", "Iowan Old Style", "Baskerville", Georgia, serif;
+
+  /* Motion — ease-out first, 300ms is the ceiling for anything interactive */
+  --ease-out-cds: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring-cds: cubic-bezier(0.34, 1.28, 0.64, 1);
+  --animate-rise: rise 260ms var(--ease-out-cds) both;
+  --animate-fade: fade 180ms var(--ease-out-cds) both;
+  --animate-msg-in: msg-in 200ms var(--ease-out-cds) both;
+  --animate-pop: pop 160ms var(--ease-spring-cds) both;
+  --animate-breathe: breathe 2400ms ease-in-out infinite;
+}
+
+:root {
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 240ms;
+  --dur-max: 300ms;
+  color-scheme: light;
 }
 
 @layer base {
@@ -28,6 +55,8 @@
   html {
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    scrollbar-color: color-mix(in srgb, var(--color-line) 80%, var(--color-ink)) transparent;
+    scrollbar-width: thin;
   }
   body {
     margin: 0;
@@ -44,58 +73,130 @@
   button {
     cursor: pointer;
   }
+  textarea {
+    caret-color: var(--color-clay);
+  }
   ::selection {
-    background: #e5c8b8;
-    color: #2b211b;
+    background: color-mix(in srgb, var(--color-clay) 28%, transparent);
+    color: var(--color-ink);
+  }
+  /* One visible focus treatment for every interactive thing that does not opt out */
+  :where(a, button, [role="button"], summary, input, textarea, select, [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--color-clay-deep);
+    outline-offset: 2px;
+  }
+  :where(img, svg) {
+    vertical-align: middle;
   }
 }
 
-@layer utilities {
+@utility hairline {
+  border: 1px solid color-mix(in srgb, var(--color-line) 90%, transparent);
+}
+
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* GPU-only motion: never transition layout or paint properties */
+@utility motion-ui {
+  transition-property: transform, translate, opacity, filter;
+  transition-duration: var(--dur-2);
+  transition-timing-function: var(--ease-out-cds);
+}
+
+@utility motion-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity;
+  transition-duration: var(--dur-1);
+  transition-timing-function: var(--ease-out-cds);
+}
+
+@utility focus-ring {
+  outline: 2px solid var(--color-clay-deep);
+  outline-offset: 2px;
+}
+
+/* CDS-ish edge mask: a 7-stop ramp instead of one hard fade */
+@utility scroll-fade-x {
+  --scroll-fade: 34px;
+  --scroll-fade-start: var(--scroll-fade);
+  --scroll-fade-end: var(--scroll-fade);
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    rgb(0 0 0 / 30%) calc(var(--scroll-fade-start) * 0.34),
+    rgb(0 0 0 / 66%) calc(var(--scroll-fade-start) * 0.66),
+    #000 var(--scroll-fade-start),
+    #000 calc(100% - var(--scroll-fade-end)),
+    rgb(0 0 0 / 66%) calc(100% - var(--scroll-fade-end) * 0.66),
+    rgb(0 0 0 / 30%) calc(100% - var(--scroll-fade-end) * 0.34),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    rgb(0 0 0 / 30%) calc(var(--scroll-fade-start) * 0.34),
+    rgb(0 0 0 / 66%) calc(var(--scroll-fade-start) * 0.66),
+    #000 var(--scroll-fade-start),
+    #000 calc(100% - var(--scroll-fade-end)),
+    rgb(0 0 0 / 66%) calc(100% - var(--scroll-fade-end) * 0.66),
+    rgb(0 0 0 / 30%) calc(100% - var(--scroll-fade-end) * 0.34),
+    transparent 100%
+  );
+  &[data-at-start="true"] {
+    --scroll-fade-start: 0.01px;
+  }
+  &[data-at-end="true"] {
+    --scroll-fade-end: 0.01px;
+  }
+}
+
+@layer components {
   .font-display {
     font-family: var(--font-serif);
     font-weight: 400;
     letter-spacing: -0.025em;
   }
+
+  /* Grain: an in-flow overlay instead of a fixed blended layer, so page scrolling
+     never forces the compositor to re-blend the whole viewport. */
   .paper-grain {
     position: relative;
+    isolation: isolate;
   }
   .paper-grain::after {
     content: "";
-    position: fixed;
+    position: absolute;
     inset: 0;
     z-index: 60;
     pointer-events: none;
-    opacity: 0.22;
+    opacity: 0.18;
     mix-blend-mode: multiply;
+    background-repeat: repeat;
+    background-size: 180px 180px;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
   }
-  .hairline {
-    border: 1px solid color-mix(in srgb, var(--color-line) 86%, transparent);
-  }
+
   .lift {
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.7) inset,
-      0 10px 24px -18px rgba(40, 34, 24, 0.45);
+      0 1px 0 rgba(255, 255, 255, 0.72) inset,
+      0 10px 24px -18px rgba(40, 34, 24, 0.4);
   }
   .soft-shadow {
-    box-shadow: 0 20px 60px -32px rgba(37, 31, 22, 0.35);
+    box-shadow: 0 24px 60px -34px rgba(37, 31, 22, 0.32);
   }
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .text-balance {
-    text-wrap: balance;
-  }
+
   .animate-in {
-    animation: rise 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: rise 260ms var(--ease-out-cds) both;
   }
   .animate-fade {
-    animation: fade 0.3s ease-out both;
+    animation: fade 180ms var(--ease-out-cds) both;
   }
+
   .typing-dot {
     animation: blink 1.2s infinite ease-in-out;
   }
@@ -105,16 +206,178 @@
   .typing-dot:nth-child(3) {
     animation-delay: 0.3s;
   }
+
+  /* ── Block card ──────────────────────────────────────────────────────────
+     Tactile 2px lift on hover only. The shadow is static (no paint transition),
+     and will-change is applied by the component only while dragging. */
+  .block-card {
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.8) inset,
+      0 7px 16px -15px rgba(40, 34, 24, 0.55);
+    transition-property: translate, opacity;
+    transition-duration: var(--dur-2);
+    transition-timing-function: var(--ease-out-cds);
+  }
+  .block-card[data-dragging="true"] {
+    opacity: 0.6;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .block-card:not([data-dragging="true"]):hover {
+      translate: 0 -2px;
+    }
+  }
+  .block-card-grip {
+    opacity: 0.72;
+    transition-property: color, background-color, opacity;
+    transition-duration: var(--dur-1);
+    transition-timing-function: var(--ease-out-cds);
+  }
+  .block-card:hover .block-card-grip,
+  .block-card:focus-within .block-card-grip,
+  .block-card-grip:hover,
+  .block-card-grip:focus-visible {
+    opacity: 1;
+  }
+  @media (min-width: 40rem) {
+    .block-card-grip {
+      opacity: 0.6;
+    }
+    .block-card:hover .block-card-grip,
+    .block-card:focus-within .block-card-grip,
+    .block-card-grip:hover,
+    .block-card-grip:focus-visible {
+      opacity: 1;
+    }
+  }
+
+  /* ── Trip board scroller ────────────────────────────────────────────── */
+  .tripboard-scroller {
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: 20px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .tripboard-scroller::-webkit-scrollbar {
+    display: none;
+  }
+  .tripboard-scroller:focus-visible {
+    outline: 2px solid var(--color-clay-deep);
+    outline-offset: -3px;
+  }
+  .tripboard-hint {
+    opacity: 0;
+    translate: 0 4px;
+    transition-property: opacity, translate;
+    transition-duration: var(--dur-2);
+    transition-timing-function: var(--ease-out-cds);
+  }
+  .tripboard-hint[data-visible="true"] {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  /* ── React Flow chrome (App applies .tripblocks-canvas to the wrapper) ── */
+  .tripblocks-canvas .react-flow__controls {
+    overflow: hidden;
+    border: 1px solid var(--color-hairline);
+    border-radius: 10px;
+  }
+  .tripblocks-canvas .react-flow__controls-button {
+    color: var(--color-muted);
+  }
+  .tripblocks-canvas .react-flow__controls-button:hover {
+    color: var(--color-ink);
+  }
+  .tripblocks-canvas .react-flow__controls-button:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 2px solid var(--color-clay-deep);
+    outline-offset: -2px;
+  }
+  .tripblocks-canvas .react-flow__minimap {
+    overflow: hidden;
+    border: 1px solid var(--color-hairline);
+    border-radius: 10px;
+    box-shadow: 0 12px 30px -26px rgba(40, 34, 24, 0.6);
+  }
+  .tripblocks-canvas .react-flow__attribution {
+    border-radius: 6px;
+    color: var(--color-faint);
+    font-size: 9px;
+    letter-spacing: 0.02em;
+  }
+  .tripblocks-canvas .react-flow__attribution a {
+    color: var(--color-faint);
+  }
+  .tripblocks-canvas .react-flow__edge-path {
+    stroke-linecap: round;
+  }
+  .tripblocks-canvas .react-flow__node {
+    font-family: var(--font-sans);
+  }
+  .tripblocks-canvas .react-flow__node:focus-visible {
+    outline: 2px solid var(--color-clay-deep);
+    outline-offset: 3px;
+    border-radius: 12px;
+  }
+  .tripblocks-canvas .react-flow__node.dragging {
+    cursor: grabbing;
+  }
+  .tripblocks-canvas .react-flow__handle {
+    transition-property: background-color, border-color, box-shadow;
+    transition-duration: var(--dur-1);
+    transition-timing-function: var(--ease-out-cds);
+  }
 }
 
+/* React Flow declares its defaults on `.react-flow` itself, so canvas theming
+   has to live unlayered at a higher specificity to win the cascade. */
+.tripblocks-canvas .react-flow {
+  --xy-background-color: var(--color-surface-0);
+  --xy-background-pattern-dots-color: color-mix(in srgb, var(--color-faint) 34%, transparent);
+  --xy-background-pattern-lines-color: color-mix(in srgb, var(--color-line) 70%, transparent);
+  --xy-background-pattern-cross-color: color-mix(in srgb, var(--color-line) 90%, transparent);
+
+  --xy-edge-stroke: color-mix(in srgb, var(--color-clay) 55%, var(--color-line));
+  --xy-edge-stroke-width: 1.5;
+  --xy-edge-stroke-selected: var(--color-clay-deep);
+  --xy-connectionline-stroke: var(--color-clay);
+  --xy-connectionline-stroke-width: 1.5;
+
+  --xy-handle-background-color: var(--color-surface-3);
+  --xy-handle-border-color: color-mix(in srgb, var(--color-clay) 70%, var(--color-line));
+
+  --xy-controls-button-background-color: color-mix(in srgb, var(--color-surface-2) 94%, transparent);
+  --xy-controls-button-background-color-hover: var(--color-surface-1);
+  --xy-controls-button-color: var(--color-muted);
+  --xy-controls-button-color-hover: var(--color-ink);
+  --xy-controls-button-border-color: var(--color-hairline);
+  --xy-controls-box-shadow: 0 12px 28px -24px rgba(40, 34, 24, 0.55);
+
+  --xy-minimap-background-color: color-mix(in srgb, var(--color-surface-0) 94%, transparent);
+  --xy-minimap-mask-background-color: color-mix(in srgb, var(--color-ink) 7%, transparent);
+  --xy-minimap-mask-stroke-color: color-mix(in srgb, var(--color-ink) 16%, transparent);
+  --xy-minimap-mask-stroke-width: 1;
+  --xy-minimap-node-background-color: color-mix(in srgb, var(--color-clay) 26%, var(--color-surface-2));
+  --xy-minimap-node-stroke-color: color-mix(in srgb, var(--color-clay) 48%, transparent);
+  --xy-minimap-node-stroke-width: 1;
+
+  --xy-attribution-background-color: color-mix(in srgb, var(--color-surface-0) 72%, transparent);
+  --xy-selection-background-color: color-mix(in srgb, var(--color-clay) 12%, transparent);
+  --xy-selection-border: 1px dashed color-mix(in srgb, var(--color-clay) 55%, transparent);
+}
+
+/* Short, transform/opacity/filter-only keyframes (interactive <= 300ms,
+   ambient breathing <= 2.4s). */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translate3d(0, 8px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 @keyframes fade {
@@ -123,6 +386,37 @@
   }
   to {
     opacity: 1;
+  }
+}
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 4px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.15);
   }
 }
 @keyframes blink {
@@ -143,6 +437,8 @@
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

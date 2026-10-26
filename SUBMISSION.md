@@ -6,12 +6,16 @@
 - **GitHub**：https://github.com/37chengshan/tripblocks
 - **提交 Issue**：https://github.com/modelstudioai/modelstudioai.github.io/issues/203
 - **Demo 视频**：https://github.com/37chengshan/tripblocks/raw/main/docs/demo/tripblocks-demo.mp4
+- **Editorial intro**：`site/index.html``https://37chengshan.github.io/tripblocks/`
+- **Demo workbench**：`site/demo.html`（只读对话 + 可编辑本地行程图）
+- **Architecture**：`site/architecture.html`（从实际仓库代码绘制）
 - **演示**：`npm install && npm run dev:all`，打开 `http://127.0.0.1:5173`
 - **核心能力**：7 天模块化 board、跨天拖拽、FlyAI 实时酒店/景点、Wander Managed Agent、路线/预算视图
 - **Agent**：阿里云百炼 Managed Agent（`agent/agents.yaml`），Vault 绑定，前端不接触密钥
 - **FlyAI**：官方 `@fly-ai/flyai-cli`，`server.mjs` 的 `/api/flyai`
 - **封面**：`docs/screenshots/cover-3x4.png`
 - **截图**：`docs/screenshots/home.png`、`flyai-stays.png`、`mobile-home.png`
-- **已知限制**：百炼控制台当前没有 API Key；Managed Agent 实时回答需补 Key；Live FlyAI 已可用
+- **状态**：Managed Agent 已接入并在充值后可用；FlyAI 已可用；演示视频 26 秒、1920×1080
+- **已知限制**：Live 价格以 CNY 返回，加入 JPY 行程时按 ≈ ¥20 JPY / ¥1 CNY 估算；不包含真实支付/出票/多人协同；Agent 建议需用户确认后才写入行程
 
-> 提交前请补：团队名、联系人、GitHub/部署链接、演示视频链接。
+> 提交前请补：团队名、联系人、Pages 部署确认（push 后由 Actions 发布）。

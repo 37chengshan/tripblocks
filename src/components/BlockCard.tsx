@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Clock3, GripVertical, Lock } from "lucide-react";
@@ -16,11 +17,16 @@ export function BlockCard({
     id: block.id,
   });
   const meta = kindMeta[block.kind];
-  const style = {
+  // Only dnd-kit owns `transform`; the hover lift lives on the `translate`
+  // property in CSS so the two never fight. will-change is scoped to the drag.
+  const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    // dnd-kit hands back `transform linear` even at rest; applying that would
+    // stomp the CSS hover transition, so only pass it while a shift is live.
+    transition: !isDragging && transform ? transition : undefined,
     borderColor: meta.border,
     background: `linear-gradient(180deg, #fffdf8 0%, ${meta.soft} 145%)`,
+    willChange: isDragging ? "transform" : undefined,
   };
 
   return (
@@ -28,10 +34,9 @@ export function BlockCard({
       ref={setNodeRef}
       style={style}
       {...attributes}
+      data-dragging={isDragging ? "true" : "false"}
       onClick={() => onSelect(block.id)}
-      className={`group relative cursor-pointer overflow-hidden rounded-[13px] border px-3 py-3 text-left shadow-[0_1px_0_rgba(255,255,255,.8)_inset,0_7px_16px_-15px_rgba(40,34,24,.55)] transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-[0_1px_0_rgba(255,255,255,.8)_inset,0_13px_24px_-16px_rgba(40,34,24,.5)] ${
-        isDragging ? "z-20 opacity-45" : ""
-      }`}
+      className="block-card group relative cursor-pointer overflow-hidden rounded-[13px] border px-3 py-3 text-left"
       role="button"
       tabIndex={0}
       onKeyDown={(event) => {
@@ -55,8 +60,9 @@ export function BlockCard({
           <button
             {...listeners}
             onClick={(event) => event.stopPropagation()}
-            className="-mr-1 -mt-1 cursor-grab touch-none rounded p-1 text-faint/40 opacity-100 transition hover:bg-black/[.035] hover:text-muted active:cursor-grabbing sm:opacity-0 sm:group-hover:opacity-100"
-            aria-label="Drag block"
+            className="block-card-grip -mr-1 -mt-1 grid h-6 w-6 cursor-grab touch-none place-items-center rounded-md text-faint/50 hover:bg-black/[.045] hover:text-muted active:cursor-grabbing"
+            aria-label={`Reorder ${block.title}`}
+            title="Drag to move"
           >
             <GripVertical size={13} />
           </button>

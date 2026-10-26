@@ -33,6 +33,7 @@ export type Trip = {
   budget: number;
   pace: "Slow" | "Balanced" | "Full";
   blocks: Block[];
+  positions?: Record<string, { x: number; y: number }>;
 };
 
 export type ChatRole = "assistant" | "user";

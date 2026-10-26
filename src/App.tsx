@@ -15,6 +15,7 @@ import {
 import { CalendarDays, Map, Sparkles, Wallet } from "lucide-react";
 import { AddBlockSheet } from "./components/AddBlockSheet";
 import { BudgetView } from "./components/BudgetView";
+import { CanvasBoard, initialCanvasPosition } from "./components/CanvasBoard";
 import { Companion } from "./components/Companion";
 import { FlyAISheet } from "./components/FlyAISheet";
 import { Inspector } from "./components/Inspector";
@@ -65,7 +66,7 @@ function loadTrip(): Trip {
 
 export default function App() {
   const [trip, setTrip] = useState<Trip>(loadTrip);
-  const [view, setView] = useState<ViewKey>("board");
+  const [view, setView] = useState<ViewKey>("canvas");
   const [mobilePanel, setMobilePanel] = useState<"plan" | "wander">("plan");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [addDay, setAddDay] = useState<number | null>(null);
@@ -113,29 +114,66 @@ export default function App() {
   }
 
   function updateBlock(next: Block) {
-    setTrip((prev) => ({ ...prev, blocks: prev.blocks.map((block) => (block.id === next.id ? next : block)) }));
+    setTrip((prev) => {
+      const previous = prev.blocks.find((block) => block.id === next.id);
+      const positions = prev.positions ? { ...prev.positions } : undefined;
+      if (positions && previous && (previous.start !== next.start || previous.dayId !== next.dayId)) {
+        delete positions[next.id];
+      }
+      return {
+        ...prev,
+        positions,
+        blocks: prev.blocks.map((block) => (block.id === next.id ? next : block)),
+      };
+    });
     setSelectedId(null);
     notify("Block updated");
   }
 
   function deleteBlock(id: string) {
-    setTrip((prev) => ({ ...prev, blocks: prev.blocks.filter((block) => block.id !== id) }));
+    setTrip((prev) => {
+      const positions = prev.positions ? { ...prev.positions } : undefined;
+      if (positions) delete positions[id];
+      return { ...prev, positions, blocks: prev.blocks.filter((block) => block.id !== id) };
+    });
     setSelectedId(null);
     notify("Removed from the plan");
   }
 
   function addBlock(input: Omit<Block, "id">) {
     const block: Block = { ...input, id: `block-${Date.now()}-${Math.round(Math.random() * 9999)}` };
-    setTrip((prev) => ({ ...prev, blocks: [...prev.blocks, block] }));
+    setTrip((prev) => ({
+      ...prev,
+      blocks: [...prev.blocks, block],
+      positions: { ...prev.positions, [block.id]: initialCanvasPosition(prev, block) },
+    }));
     setAddDay(null);
     setActiveId(null);
     setSelectedId(null);
     notify(`Added to Day ${block.dayId}`);
   }
 
+  function moveNode(id: string, position: { x: number; y: number }, schedule?: { dayId: number; start: string }) {
+    setTrip((prev) => ({
+      ...prev,
+      positions: { ...prev.positions, [id]: position },
+      blocks: schedule
+        ? prev.blocks.map((block) =>
+            block.id === id ? { ...block, dayId: schedule.dayId, start: schedule.start } : block,
+          )
+        : prev.blocks,
+    }));
+    notify(schedule ? `Rescheduled · Day ${schedule.dayId} at ${schedule.start}` : "Canvas layout saved");
+  }
+
+  function resetLayout() {
+    setTrip((prev) => ({ ...prev, positions: {} }));
+    notify("Auto layout reapplied");
+  }
+
   function applySuggestion(suggestion: Suggestion) {
     addBlock({ ...suggestion, locked: false });
-    setView("board");
+    setView("canvas");
     setMobilePanel("plan");
   }
 
@@ -160,6 +198,7 @@ export default function App() {
       ]);
     } catch {
       setAgentOnline(false);
+      notify("Wander is offline — using the local planner");
       const reply = localReply(prompt, trip);
       setMessages((prev) => [
         ...prev,
@@ -204,11 +243,17 @@ export default function App() {
       start = "09:00";
     }
 
-    setTrip((prev) => ({
-      ...prev,
-      blocks: prev.blocks.map((item) => (item.id === block.id ? { ...item, dayId: targetDay, start } : item)),
-    }));
+    setTrip((prev) => {
+      const positions = prev.positions ? { ...prev.positions } : undefined;
+      if (positions && (targetDay !== block.dayId || start !== block.start)) delete positions[block.id];
+      return {
+        ...prev,
+        positions,
+        blocks: prev.blocks.map((item) => (item.id === block.id ? { ...item, dayId: targetDay, start } : item)),
+      };
+    });
     if (targetDay !== block.dayId) notify(`Moved to Day ${targetDay}`);
+    else notify(`Reordered in Day ${targetDay}`);
   }
 
   function share() {
@@ -268,7 +313,25 @@ export default function App() {
         <SideRail view={view} onView={openView} spent={spent} budget={trip.budget} onWander={() => setMobilePanel("wander")} agentOnline={agentOnline} />
 
         <div className={`flex min-h-0 min-w-0 flex-1 ${mobilePanel === "wander" ? "hidden xl:flex" : "flex"}`}>
-          <main className="min-w-0 flex-1 overflow-y-auto pb-[78px] xl:pb-0">
+          <main
+            className={`min-w-0 flex-1 ${
+              view === "canvas"
+                ? "flex min-h-0 flex-col overflow-hidden pb-[calc(70px+env(safe-area-inset-bottom))] xl:pb-0"
+                : "overflow-y-auto pb-[calc(78px+env(safe-area-inset-bottom))] xl:pb-0"
+            }`}
+          >
+            {view === "canvas" && (
+              <CanvasBoard
+                trip={trip}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                onAdd={setAddDay}
+                onMove={moveNode}
+                onResetLayout={resetLayout}
+                onBoard={() => setView("board")}
+              />
+            )}
+
             {view === "board" && (
               <>
                 <Hero
@@ -312,7 +375,11 @@ export default function App() {
             {view === "map" && <RouteMap trip={trip} onAsk={ask} />}
             {view === "budget" && <BudgetView trip={trip} onAsk={ask} />}
 
-            <footer className="mx-4 mb-4 flex items-center justify-between border-t border-line/60 px-1 py-4 text-[9px] text-faint md:mx-7">
+            <footer
+              className={`mx-4 mb-4 shrink-0 items-center justify-between border-t border-line/60 px-1 py-4 text-[9px] text-faint md:mx-7 ${
+                view === "canvas" ? "hidden xl:flex" : "flex"
+              }`}
+            >
               <span>TRIPBLOCKS · a calmer way to travel</span>
               <span className="flex items-center gap-1.5"><span className={`h-1 w-1 rounded-full ${agentOnline ? "bg-moss" : "bg-sun"}`} /> {agentOnline ? "Managed Agent connected" : "Local fallback"}</span>
             </footer>
@@ -329,11 +396,13 @@ export default function App() {
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/95 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl xl:hidden">
         <div className="mx-auto flex max-w-md items-center justify-around">
           {[
-            { key: "board" as const, label: "Plan", icon: CalendarDays },
+            { key: "canvas" as const, label: "Plan", icon: CalendarDays },
             { key: "map" as const, label: "Map", icon: Map },
             { key: "budget" as const, label: "Budget", icon: Wallet },
           ].map((item) => {
-            const active = mobilePanel === "plan" && view === item.key;
+            const active =
+              mobilePanel === "plan" &&
+              (view === item.key || (item.key === "canvas" && view === "board"));
             const Icon = item.icon;
             return (
               <button
@@ -390,7 +459,12 @@ export default function App() {
       )}
 
       {toast && (
-        <div className="fixed bottom-[84px] left-1/2 z-[70] -translate-x-1/2 rounded-full border border-ink/10 bg-ink px-4 py-2 text-[10px] text-paper shadow-xl xl:bottom-6">
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="pointer-events-none fixed bottom-[calc(84px+env(safe-area-inset-bottom))] left-1/2 z-[70] -translate-x-1/2 rounded-full border border-ink/10 bg-ink px-4 py-2 text-[10px] text-paper shadow-xl xl:bottom-6"
+        >
           {toast}
         </div>
       )}

@@ -5,7 +5,14 @@
 
 ![TripBlocks home](docs/screenshots/home.png)
 
-[30 秒 Demo 视频](docs/demo/tripblocks-demo.mp4)
+[26 秒 Demo 视频](docs/demo/tripblocks-demo.mp4)
+
+## 站点 / Demo / 架构
+
+- **Editorial intro**：`site/index.html` — Tana 式编辑排版，所有视觉由内联 SVG / CSS 绘制，零照片。
+- **Demo workbench**：`site/demo.html` — 可拖拽的 Kansai 行程图、节点编辑、三组只读 Agent 对话；没有聊天输入框，不调用模型。
+- **Architecture map**：`site/architecture.html` — 从仓库实际代码绘制的交互式架构图（Archify-style）。
+- **GitHub Pages**：`.github/workflows/pages.yml` 将 `site/` 发布为 Pages；部署后路径为 `https://37chengshan.github.io/tripblocks/`、`/demo.html`、`/architecture.html`。GitHub Pages 由 `pages.yml` 发布。
 
 TripBlocks 是一个模块化的旅行计划台：把交通、住宿、体验、吃饭和留白做成可拖拽的「块」，让行程从一张待办清单变成可以呼吸的周计划。右侧的 **Wander** 接阿里云百炼 Managed Agent，实时读取当前计划；真正的酒店与景点库存由 **FlyAI / 飞猪** 提供。
 
@@ -97,10 +104,16 @@ docs/COMPETITION.md       比赛提交说明
 
 ## 设计
 
-暖白纸张、发丝边、陶土色强调，不依赖大面积渐变或玻璃拟态。计划本身是主角；AI 是旁边安静的第二意见，而不是遮住内容的聊天窗。
+暖白纸张、发丝边、陶土色强调，不依赖大面积渐变或玻璃拟态。计划本身是主角；AI 是旁边安静的第二意见，而不是遮住内容的聊天窗。Intro 采用编辑式排版与代码绘制的路线/节点艺术；Demo 刻意与 Intro 区分，是更密、更工具化的本地工作台。
+
+## 当前状态
+
+- **Managed Agent**：已接入，充值后可用；`server.mjs` 通过 `bl managed-agent session run` 调用，Vault 绑定，前端不接触密钥。
+- **FlyAI**：已可用；官方 `@fly-ai/flyai-cli`，真实酒店/景点、图片、价格与飞猪链接。
+- **Video**：20–30 秒，1920×1080，`docs/demo/tripblocks-demo.mp4`。
 
 ## 已知限制
 
 - Live FlyAI 价格以 CNY 显示；加入 JPY 计划时按 `≈ ¥20 JPY / ¥1 CNY` 估算，并在块备注中标注。
-- Managed Agent 是否可调用取决于阿里云百炼账号的模型权限；权限不足时界面会明确显示本地草稿，而不是伪造 AI 结果。
+- Managed Agent 已接入并在充值后可用；如果账号权限/额度暂时不可用，服务端可按配置回退到本地模型，前端也会明确显示本地草稿，而不是伪造 AI 结果。
 - 这是比赛 Demo，不包含支付、真实订房/出票或多人协同。

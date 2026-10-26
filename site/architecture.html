@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TripBlocks — Architecture</title>
+  <meta name="description" content="An interactive, repository-grounded map of TripBlocks: React UI, local Node server, Bailian Managed Agent, FlyAI CLI, Fliggy inventory, localStorage and JSON export.">
+  <meta name="theme-color" content="#f1eadf">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23f1eadf'/%3E%3Crect x='13' y='13' width='16' height='16' fill='%232c2024'/%3E%3Crect x='35' y='13' width='16' height='16' fill='%23a34a2a'/%3E%3Crect x='13' y='35' width='38' height='16' fill='%232c2024'/%3E%3C/svg%3E">
+  <style>
+    @font-face{font-family:"Bodoni Moda";src:url("fonts/bodoni-moda-latin.woff2") format("woff2");font-weight:400 900;font-style:normal;font-display:swap}
+    @font-face{font-family:"Inter Tight";src:url("fonts/inter-tight-var-latin.woff2") format("woff2");font-weight:300 700;font-style:normal;font-display:swap}
+    @font-face{font-family:"IBM Plex Mono";src:url("fonts/ibm-plex-mono-400-latin.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+    @font-face{font-family:"IBM Plex Mono";src:url("fonts/ibm-plex-mono-500-latin.woff2") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+    :root{--paper:#f1eadf;--paper-deep:#e7dccb;--paper-light:#fbf7ef;--ink:#2c2024;--ink-soft:#4d3e3b;--muted:#7f6d61;--clay:#8e3d22;--clay-bright:#a94d2c;--line:rgba(44,32,36,.18);--line-strong:rgba(44,32,36,.42);--display:"Bodoni Moda",Didot,"Bodoni 72",serif;--sans:"Inter Tight","Helvetica Neue",Arial,sans-serif;--mono:"IBM Plex Mono",monospace;--ease:cubic-bezier(.22,1,.36,1)}
+    *,*::before,*::after{box-sizing:border-box}
+    html{scroll-behavior:smooth;background:var(--paper)}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:clip}
+    body::before{content:"";position:fixed;inset:0;z-index:90;pointer-events:none;opacity:.11;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");background-size:220px 220px}
+    a{color:inherit;text-decoration:none}p{margin:0}button{font:inherit;color:inherit;cursor:pointer}
+    ::selection{background:var(--clay);color:var(--paper-light)}
+    .skip{position:fixed;top:8px;left:8px;z-index:200;padding:10px 14px;background:var(--ink);color:var(--paper);font:500 10px/1 var(--mono);transform:translateY(-180%)}.skip:focus{transform:none}
+    .shell{width:min(1320px,calc(100% - 64px));margin:0 auto}
+    header.site{position:sticky;top:0;z-index:50;background:rgba(241,234,223,.9);border-bottom:1px solid var(--line);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+    .header-in{height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px}
+    .brand{display:inline-flex;align-items:center;gap:10px;width:max-content;font:500 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase}
+    .brand-mark{display:grid;grid-template-columns:repeat(3,5px);gap:2px}.brand-mark i{width:5px;height:5px;background:currentColor}.brand-mark i:nth-child(2){background:var(--clay)}.brand-mark i:nth-child(3){grid-column:1/-1;width:19px;height:5px}
+    .header-note{font:400 8.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:flex;gap:18px}.header-note span+span::before{content:"·";margin-right:18px;color:var(--clay)}
+    nav.top{display:flex;justify-content:flex-end;gap:22px;font:400 9px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}nav.top a:hover{color:var(--clay)}
+    .hero{padding:86px 0 40px}
+    .eyebrow{font:500 8.5px/1.2 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--clay)}
+    .hero-grid{display:grid;grid-template-columns:1.15fr .65fr;gap:80px;align-items:end;margin-top:28px;padding-top:14px;border-top:1px solid var(--line-strong)}
+    h1{font-family:var(--display);font-weight:500;font-size:clamp(3rem,7.3vw,7.2rem);line-height:.9;letter-spacing:-.045em;text-transform:uppercase;margin:0}
+    .hero p{max-width:42ch;font-size:16px;line-height:1.55;color:var(--ink-soft)}
+    .hero .status{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px 16px;font:400 8px/1.5 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}.status b{font-weight:500;color:var(--clay)}
+    .map-section{padding:26px 0 70px}
+    .map-head{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:18px;padding-top:12px;border-top:1px solid var(--line-strong)}
+    .map-head h2{font-family:var(--display);font-size:clamp(1.6rem,2.4vw,2.4rem);font-weight:500;line-height:1;letter-spacing:-.03em;margin:5px 0 0}
+    .legend{display:flex;gap:16px;font:400 8px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap}.legend span{display:flex;align-items:center;gap:6px}.legend i{width:8px;height:8px;display:block;border:1px solid var(--line-strong)}.legend i.browser{background:var(--paper-light)}.legend i.server{background:var(--paper-deep)}.legend i.external{background:var(--clay)}
+    .map-frame{border:1px solid var(--line-strong);background:var(--paper-light);overflow:auto;box-shadow:0 18px 50px rgba(44,32,36,.06)}
+    .map-inner{position:relative;min-width:1200px;height:620px;background-image:radial-gradient(circle at 1px 1px,rgba(44,32,36,.14) 1px,transparent 0);background-size:22px 22px}
+    .map-inner::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.34),transparent 38%,transparent 70%,rgba(231,220,203,.3));pointer-events:none}
+    .edges{position:absolute;inset:0;width:1200px;height:620px;overflow:visible;pointer-events:none}
+    .edges path{fill:none;stroke:rgba(44,32,36,.34);stroke-width:1.1;marker-end:url(#arrow);vector-effect:non-scaling-stroke}
+    .edges path.flow-agent{stroke:rgba(142,61,34,.55);stroke-dasharray:4 5}
+    .edges path.flow-fly{stroke:rgba(77,62,59,.55);stroke-dasharray:4 5}
+    .edges path.is-hot{stroke:var(--clay-bright);stroke-width:2.2;stroke-dasharray:none}
+    .edge-label{font:400 8px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;fill:var(--muted)}
+    .arc-node{position:absolute;display:flex;flex-direction:column;text-align:left;border:1px solid var(--line-strong);background:var(--paper-light);padding:11px 13px;transition:transform .25s var(--ease),box-shadow .25s ease,border-color .25s ease;box-shadow:0 6px 18px rgba(44,32,36,.045)}
+    .arc-node:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(44,32,36,.11);border-color:rgba(142,61,34,.58);z-index:4}
+    .arc-node[aria-pressed="true"]{border-color:var(--clay);box-shadow:0 0 0 2px rgba(142,61,34,.16),0 14px 32px rgba(44,32,36,.1);z-index:5}
+    .arc-node .kicker{font:500 7.5px/1.2 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--clay)}
+    .arc-node strong{display:block;margin-top:7px;font-family:var(--display);font-size:17px;font-weight:500;line-height:1.02;letter-spacing:-.02em}
+    .arc-node .meta{display:block;margin-top:auto;font:400 7.5px/1.3 var(--mono);color:var(--muted)}
+    .arc-node .meta span+span::before{content:"·";margin:0 5px;color:var(--line-strong)}
+    .arc-node.browser{background:var(--paper-light)}.arc-node.server{background:rgba(231,220,203,.62)}.arc-node.external{border-color:rgba(142,61,34,.5);background:rgba(142,61,34,.07)}
+    .arc-node.external .kicker{color:var(--clay-bright)}
+    .detail{display:grid;grid-template-columns:.8fr 1.2fr;gap:34px;margin-top:18px;border:1px solid var(--line);background:rgba(251,247,239,.55)}
+    .detail-intro{padding:22px;border-right:1px solid var(--line)}
+    .detail-intro .eyebrow{font-size:7.5px}
+    .detail-intro h3{font-family:var(--display);font-size:30px;font-weight:500;line-height:.98;letter-spacing:-.03em;margin:8px 0 10px}
+    .detail-intro p{font-size:11.5px;line-height:1.55;color:var(--muted)}
+    .detail-body{padding:22px;min-height:220px}
+    .detail-body .role{font-size:13px;line-height:1.55;color:var(--ink-soft);max-width:72ch}
+    .facts{display:grid;grid-template-columns:1fr 1fr;gap:14px 26px;margin-top:18px}
+    .fact-label{font:500 7px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--clay)}
+    .fact-value{display:block;margin-top:4px;font-size:11px;line-height:1.45;color:var(--ink-soft)}
+    .code{margin-top:18px;padding:12px 14px;background:var(--ink);color:#e7dccb;font:400 9.5px/1.65 var(--mono);overflow:auto;white-space:pre-wrap;word-break:break-word}
+    .file-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+    .file-links a{padding:5px 7px;border:1px solid var(--line);font:400 7.5px/1 var(--mono);letter-spacing:.02em;color:var(--clay);background:rgba(251,247,239,.7)}
+    .file-links a:hover{border-color:var(--clay)}
+    .lifecycle{padding:76px 0 34px}
+    .lifecycle-head{display:grid;grid-template-columns:.7fr 1.3fr;gap:80px;align-items:end;padding-top:12px;border-top:1px solid var(--line-strong)}
+    .lifecycle h2{font-family:var(--display);font-size:clamp(2rem,4vw,4rem);font-weight:500;line-height:.94;letter-spacing:-.035em;text-transform:uppercase;margin:8px 0 0}
+    .lifecycle-head p{font-size:14px;line-height:1.6;color:var(--muted);max-width:52ch}
+    .steps{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--ink);margin-top:54px}
+    .step{padding:20px 22px 26px 0;border-right:1px solid var(--line)}.step:last-child{border-right:0}
+    .step-n{font:500 9px/1 var(--mono);color:var(--clay);letter-spacing:.1em}.step h3{font-family:var(--display);font-size:23px;font-weight:500;line-height:1.02;letter-spacing:-.02em;margin:22px 0 8px}.step p{font-size:11.5px;line-height:1.55;color:var(--muted)}
+    .footer{margin-top:70px;border-top:1px solid var(--line-strong);padding:24px 0 40px;display:flex;justify-content:space-between;gap:24px;font:400 8px/1.5 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .footer nav{display:flex;gap:18px;flex-wrap:wrap}.footer a:hover{color:var(--clay)}
+    .note{font:400 8px/1.5 var(--mono);color:var(--muted);margin-top:10px}
+    @media(max-width:980px){.shell{width:calc(100% - 40px)}.header-in{grid-template-columns:1fr auto}.header-note{display:none}.hero-grid,.lifecycle-head{grid-template-columns:1fr;gap:30px}.hero{padding-top:60px}.detail{grid-template-columns:1fr}.detail-intro{border-right:0;border-bottom:1px solid var(--line)}.steps{grid-template-columns:1fr 1fr}.step:nth-child(2){border-right:0}.step:nth-child(-n+2){border-bottom:1px solid var(--line)}.footer{display:block}.footer nav{margin-top:14px}}
+    @media(max-width:640px){h1{font-size:clamp(2.7rem,13vw,4.6rem)}.header-in{height:57px}.brand{font-size:8.5px}nav.top{gap:12px;font-size:8px}nav.top a:first-child{display:none}.map-head{display:block}.legend{margin-top:14px}.map-inner{height:620px}.steps{grid-template-columns:1fr}.step{border-right:0;border-bottom:1px solid var(--line)}.detail-intro h3{font-size:26px}.hero p{font-size:14px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+  </style>
+</head>
+<body>
+  <a class="skip" href="#map">Skip to the architecture map</a>
+  <header class="site">
+    <div class="shell header-in">
+      <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>TripBlocks</span></a>
+      <p class="header-note"><span>Architecture</span><span>Repository / 2026</span></p>
+      <nav class="top" aria-label="Primary"><a href="index.html">Landing</a><a href="demo.html">Demo</a><a href="https://github.com/37chengshan/tripblocks" target="_blank" rel="noreferrer">GitHub ↗</a></nav>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">Architecture / one user-triggered loop</p>
+      <div class="hero-grid">
+        <h1>Plan local.<br>Ground live.<br>Ask once.</h1>
+        <div>
+          <p>The browser owns the itinerary. A small local Node server owns the credentials and the two external calls: Bailian Managed Agent for the second opinion, FlyAI for real Fliggy inventory. Nothing polls. Nothing is written by the agent without a user action.</p>
+          <p class="status"><span><b>Managed Agent</b> live after recharge</span><span><b>FlyAI</b> live</span><span><b>State</b> localStorage</span><span><b>Fallback</b> optional</span></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="map-section" id="map">
+      <div class="map-head">
+        <div><p class="eyebrow">The map</p><h2>Click a node. Read the actual path.</h2></div>
+        <div class="legend"><span><i class="browser"></i>Browser</span><span><i class="server"></i>Local server</span><span><i class="external"></i>External</span></div>
+      </div>
+
+      <div class="map-frame">
+        <div class="map-inner" id="mapInner">
+          <svg class="edges" viewBox="0 0 1200 620" aria-hidden="true">
+            <defs><marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="rgba(44,32,36,.45)"/></marker></defs>
+            <path data-from="ui" data-to="server" d="M250 250 C292 250, 295 304, 330 304"/>
+            <path data-from="ui" data-to="local" d="M135 310 L135 355"/>
+            <path data-from="ui" data-to="export" d="M75 310 C40 360, 40 470, 62 500"/>
+            <path data-from="server" data-to="agentRoute" class="flow-agent" d="M445 250 L445 165"/>
+            <path data-from="agentRoute" data-to="managed" class="flow-agent" d="M560 120 C600 120, 610 108, 650 108"/>
+            <path data-from="managed" data-to="bailian" class="flow-agent" d="M880 108 C915 108, 925 108, 960 108"/>
+            <path data-from="server" data-to="flyRoute" d="M445 370 L445 445"/>
+            <path data-from="flyRoute" data-to="flyai" d="M560 490 C600 490, 610 500, 650 500"/>
+            <path data-from="flyai" data-to="fliggy" d="M880 500 C915 500, 925 500, 960 500"/>
+            <path data-from="server" data-to="fallback" class="flow-agent" d="M560 340 C605 340, 610 265, 650 265"/>
+            <text class="edge-label" x="258" y="238">POST /api/agent</text>
+            <text class="edge-label" x="258" y="400">GET /api/flyai</text>
+            <text class="edge-label" x="466" y="184">bl CLI</text>
+            <text class="edge-label" x="250" y="445">fallback</text>
+          </svg>
+
+          <button class="arc-node browser" type="button" data-node="ui" aria-pressed="true" style="left:20px;top:195px;width:230px;height:115px">
+            <span class="kicker">Browser / React 19</span><strong>TripBlocks UI</strong><span class="meta"><span>board + canvas</span><span>no keys</span></span>
+          </button>
+          <button class="arc-node browser" type="button" data-node="local" aria-pressed="false" style="left:20px;top:355px;width:230px;height:90px">
+            <span class="kicker">Browser storage</span><strong>Itinerary draft</strong><span class="meta"><span>tripblocks:kansai:v1</span><span>survives refresh</span></span>
+          </button>
+          <button class="arc-node browser" type="button" data-node="export" aria-pressed="false" style="left:20px;top:490px;width:230px;height:80px">
+            <span class="kicker">User action</span><strong>JSON export</strong><span class="meta"><span>Blob download</span><span>portable plan</span></span>
+          </button>
+          <button class="arc-node server" type="button" data-node="server" aria-pressed="false" style="left:330px;top:245px;width:230px;height:120px">
+            <span class="kicker">Local Node server</span><strong>/api/agent + /api/flyai</strong><span class="meta"><span>127.0.0.1:8787</span><span>serves dist</span></span>
+          </button>
+          <button class="arc-node server" type="button" data-node="agentRoute" aria-pressed="false" style="left:330px;top:80px;width:230px;height:85px">
+            <span class="kicker">Server route</span><strong>Managed Agent call</strong><span class="meta"><span>single request</span><span>55s client timeout</span></span>
+          </button>
+          <button class="arc-node server" type="button" data-node="fallback" aria-pressed="false" style="left:650px;top:220px;width:230px;height:90px">
+            <span class="kicker">Optional fallback</span><strong>Local OCX model</strong><span class="meta"><span>intern/qwen3.8-27b</span><span>AGENT_FALLBACK=off</span></span>
+          </button>
+          <button class="arc-node server" type="button" data-node="flyRoute" aria-pressed="false" style="left:330px;top:445px;width:230px;height:85px">
+            <span class="kicker">Server route</span><strong>FlyAI inventory call</strong><span class="meta"><span>10 min memory cache</span><span>503 on failure</span></span>
+          </button>
+          <button class="arc-node external" type="button" data-node="managed" aria-pressed="false" style="left:650px;top:55px;width:230px;height:105px">
+            <span class="kicker">Bailian CLI</span><strong>Managed Agent session</strong><span class="meta"><span>agent/agents.yaml</span><span>Vault-bound</span></span>
+          </button>
+          <button class="arc-node external" type="button" data-node="bailian" aria-pressed="false" style="left:960px;top:55px;width:200px;height:105px">
+            <span class="kicker">External</span><strong>Bailian + Vault</strong><span class="meta"><span>remote runtime</span><span>no browser key</span></span>
+          </button>
+          <button class="arc-node external" type="button" data-node="flyai" aria-pressed="false" style="left:650px;top:445px;width:230px;height:105px">
+            <span class="kicker">FlyAI CLI</span><strong>search-hotel / search-poi</strong><span class="meta"><span>@fly-ai/flyai-cli</span><span>CNY results</span></span>
+          </button>
+          <button class="arc-node external" type="button" data-node="fliggy" aria-pressed="false" style="left:960px;top:445px;width:200px;height:105px">
+            <span class="kicker">External</span><strong>Fliggy / 飞猪</strong><span class="meta"><span>live inventory</span><span>booking links</span></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="detail" aria-live="polite">
+        <div class="detail-intro">
+          <p class="eyebrow" id="detailKicker">Browser / React 19</p>
+          <h3 id="detailTitle">TripBlocks UI</h3>
+          <p id="detailSummary">The board is the source of truth. The browser never holds a Bailian or FlyAI key.</p>
+          <p class="note">Archify-style map drawn from the repository, not a generic diagram.</p>
+        </div>
+        <div class="detail-body">
+          <p class="role" id="detailRole"></p>
+          <div class="facts" id="detailFacts"></div>
+          <div class="code" id="detailCode"></div>
+          <div class="file-links" id="detailFiles"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="lifecycle">
+      <div class="lifecycle-head">
+        <div><p class="eyebrow">Request lifecycle</p><h2>One ask.<br>Four facts.</h2></div>
+        <p>The agent is not a background loop. A user message compacts the current trip, goes to the local server once, and returns either a Managed Agent reply or a clearly marked fallback. FlyAI is a separate, cacheable inventory call.</p>
+      </div>
+      <div class="steps">
+        <article class="step"><span class="step-n">01 / compact</span><h3>Shape the context</h3><p>Days, times, places, costs and notes are compacted in <code>src/lib/agent.ts</code>. The full local plan never leaves as an uncontrolled dump.</p></article>
+        <article class="step"><span class="step-n">02 / call</span><h3>One server hop</h3><p><code>POST /api/agent</code> runs <code>bl managed-agent session run --no-stream --output json</code> against the configured agent, environment and vault.</p></article>
+        <article class="step"><span class="step-n">03 / parse</span><h3>Text + one suggestion</h3><p>The server extracts assistant text and at most one fenced JSON suggestion, clamps its fields, and returns it with the session id.</p></article>
+        <article class="step"><span class="step-n">04 / decide</span><h3>The user writes</h3><p>Suggestions render as cards. The plan changes only when the traveller chooses to add one; the agent never edits the itinerary directly.</p></article>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>TripBlocks / architecture / 2026 Fliggy AI Travel Innovation Competition</span>
+      <nav><a href="index.html">Landing</a><a href="demo.html">Demo workbench</a><a href="https://github.com/37chengshan/tripblocks" target="_blank" rel="noreferrer">GitHub</a><a href="https://github.com/37chengshan/tripblocks/blob/main/docs/COMPETITION.md" target="_blank" rel="noreferrer">Competition notes</a></nav>
+    </footer>
+  </main>
+
+  <script>
+    const NODES = {
+      ui: {
+        kicker: "Browser / React 19", title: "TripBlocks UI",
+        summary: "The board is the source of truth. The browser never holds a Bailian or FlyAI key.",
+        role: "React 19 + Vite + Tailwind v4. dnd-kit runs the seven-day board; React Flow powers the node canvas. The live FlyAI sheet and Wander companion call only local /api routes. Agent replies are rendered as cards, never auto-applied.",
+        facts: [["State", "localStorage · tripblocks:kansai:v1"], ["Export", "Blob → tripblocks-kansai.json"], ["Network", "only /api/agent and /api/flyai"], ["Keys", "none in the bundle"]],
+        code: "fetch('/api/agent', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json' },\n  body: JSON.stringify({ prompt, trip: compactTrip(trip) })\n})",
+        files: [["src/App.tsx", "src/App.tsx"], ["src/lib/agent.ts", "src/lib/agent.ts"], ["src/components/FlyAISheet.tsx", "src/components/FlyAISheet.tsx"], ["src/components/CanvasBoard.tsx", "src/components/CanvasBoard.tsx"]]
+      },
+      local: {
+        kicker: "Browser storage", title: "Itinerary draft",
+        summary: "A refresh should never lose the week. The plan is local-first before any model is involved.",
+        role: "App state is written to localStorage on every change. A malformed draft is ignored and the seeded Kansai trip is used instead. The app still works with no network, no login and no model.",
+        facts: [["Key", "tripblocks:kansai:v1"], ["Fallback", "seeded 7-day trip"], ["Private mode", "storage failure does not block edits"], ["Agent", "reads a compact copy, not storage"]],
+        code: "localStorage.setItem(\n  'tripblocks:kansai:v1',\n  JSON.stringify(trip)\n)",
+        files: [["src/App.tsx", "src/App.tsx"], ["src/data.ts", "src/data.ts"]]
+      },
+      export: {
+        kicker: "User action", title: "JSON export",
+        summary: "A plan you can take out of the app. One click, one portable file, no account required.",
+        role: "The TopBar export builds a JSON Blob from the current trip and downloads tripblocks-kansai.json. The export reflects user edits, including blocks added from FlyAI or a Wander suggestion.",
+        facts: [["Format", "pretty-printed JSON"], ["Filename", "tripblocks-kansai.json"], ["Owner", "the traveller"], ["Backend", "none"]],
+        code: "const blob = new Blob(\n  [JSON.stringify(trip, null, 2)],\n  { type: 'application/json' }\n)",
+        files: [["src/App.tsx", "src/App.tsx"], ["src/types.ts", "src/types.ts"]]
+      },
+      server: {
+        kicker: "Local Node server", title: "/api/agent + /api/flyai",
+        summary: "A deliberately small boundary. Credentials and CLI processes stay here; the browser stays key-free.",
+        role: "server.mjs listens on 127.0.0.1:8787, serves the built dist preview, validates input, runs the two external CLIs and normalises their output. Agent calls are single, user-triggered requests — no polling. FlyAI results are cached in memory for 10 minutes.",
+        facts: [["Port", "PORT · 8787"], ["Agent", "bl managed-agent session run"], ["FlyAI", "node_modules/.bin/flyai"], ["Cache", "kind:city:checkIn:checkOut · 10 min"]],
+        code: "GET  /api/health\nGET  /api/flyai?kind=hotel|poi&city=京都&checkIn=…\nPOST /api/agent   { prompt, trip }",
+        files: [["server.mjs", "server.mjs"], ["agent/agents.yaml", "agent/agents.yaml"], ["agent/agents.state.json", "agent/agents.state.json"]]
+      },
+      agentRoute: {
+        kicker: "Server route", title: "Managed Agent call",
+        summary: "One user message becomes one managed-agent session run. No scheduler, no polling loop.",
+        role: "The route validates prompt and trip, builds a Wander-specific prompt with the compacted itinerary, spawns the Bailian CLI with a 55-second client timeout, parses the JSON envelope and strips the fenced suggestion block from the answer shown to the user.",
+        facts: [["Command", "bl managed-agent session run"], ["Flags", "--agent admin --environment dev-2"], ["Output", "--no-stream --output json"], ["Timeout", "55s client · fallback optional"]],
+        code: "bl managed-agent session run \\\n  --agent admin --environment dev-2 \\\n  --file agent/agents.yaml \\\n  --no-stream --output json \\\n  --prompt \"…\"",
+        files: [["server.mjs", "server.mjs"], ["agent/agents.yaml", "agent/agents.yaml"]]
+      },
+      fallback: {
+        kicker: "Optional fallback", title: "Local OCX model",
+        summary: "If the managed agent is unavailable, a local OpenAI-compatible endpoint can answer — and says so.",
+        role: "When AGENT_FALLBACK is on, a failed managed-agent call is retried against LOCAL_MODEL_BASE_URL (default http://127.0.0.1:10100/v1) with the model intern/qwen3.8-27b. The response is marked fallback:true. Set AGENT_FALLBACK=off to return a 503 instead. The frontend still has a no-model local draft for network failures.",
+        facts: [["Default", "intern/qwen3.8-27b"], ["Endpoint", "http://127.0.0.1:10100/v1"], ["Disable", "AGENT_FALLBACK=off"], ["UI", "source: local / fallback"]],
+        code: "AGENT_FALLBACK=off npm run server\n# or override:\nLOCAL_MODEL=your/model\nLOCAL_MODEL_BASE_URL=http://127.0.0.1:10100/v1",
+        files: [["server.mjs", "server.mjs"], ["src/lib/agent.ts", "src/lib/agent.ts"]]
+      },
+      flyRoute: {
+        kicker: "Server route", title: "FlyAI inventory call",
+        summary: "A real inventory query, not a mocked catalogue. Cached for ten minutes and safe to fail.",
+        role: "GET /api/flyai accepts kind=hotel|poi, city, checkIn and checkOut. The server runs the official FlyAI CLI: search-hotel --dest-name … or search-poi --city-name … It normalises images, prices, ratings and booking links. Failures return 503 with source:unavailable; the UI never fabricates inventory.",
+        facts: [["CLI", "@fly-ai/flyai-cli"], ["Hotel", "search-hotel --dest-name"], ["POI", "search-poi --city-name"], ["Prices", "CNY · JPY estimate in blocks"]],
+        code: "flyai search-hotel --dest-name 京都 \\\n  --check-in-date 2026-11-06 \\\n  --check-out-date 2026-11-12\n\nflyai search-poi --city-name 京都",
+        files: [["server.mjs", "server.mjs"], ["src/components/FlyAISheet.tsx", "src/components/FlyAISheet.tsx"]] 
+      },
+      managed: {
+        kicker: "Bailian CLI", title: "Managed Agent session",
+        summary: "The remote agent is configured, not improvised in a prompt. Environment, tools and Vault live in YAML.",
+        role: "agent/agents.yaml defines the admin agent, environment dev-2 and a Vault binding. The agent has builtin tools (bash, read, glob, grep, web_search, web_fetch) and a travel-planning instruction. agent/agents.state.json records imported remote resources for reproducible setup.",
+        facts: [["Agent", "admin · model auto"], ["Environment", "dev-2 · cloud · unrestricted"], ["Vault", "admin"], ["Tools", "builtin: bash/read/glob/grep/web_search/web_fetch"]],
+        code: "agents:\n  admin:\n    model: auto\n    environment: dev-2\n    vault: admin\n    tools:\n      builtin: [bash, read, glob, grep, web_search, web_fetch]",
+        files: [["agent/agents.yaml", "agent/agents.yaml"], ["agent/agents.state.json", "agent/agents.state.json"]]
+      },
+      bailian: {
+        kicker: "External", title: "Bailian + Vault",
+        summary: "The browser never sees this boundary. The API key and managed runtime stay outside the client.",
+        role: "The remote runtime executes the session. The server only receives its JSON envelope: assistant messages and a session id. The client maps assistant text to the Wander panel and extracts at most one validated suggestion.",
+        facts: [["Credential", "Vault / CLI auth"], ["Runtime", "remote managed session"], ["Client key", "never"], ["Billing", "running sessions only"]],
+        code: "// server-side only\n// api_key: ${DASHSCOPE_API_KEY}\n// base_url: ${BAILIAN_BASE_URL}",
+        files: [["agent/agents.yaml", "agent/agents.yaml"], ["server.mjs", "server.mjs"]]
+      },
+      flyai: {
+        kicker: "FlyAI CLI", title: "search-hotel / search-poi",
+        summary: "Official CLI, real Fliggy results. The server normalises shape, not truth.",
+        role: "The FlyAI CLI handles authentication and the Fliggy MCP search. The server accepts the payload, normalises images/prices/ratings/links for the sheet, and caches the value for ten minutes. A missing key can still return trial results; a failure is shown as unavailable.",
+        facts: [["Package", "@fly-ai/flyai-cli"], ["Skill", "alibaba-flyai/flyai-skill"], ["Cache", "10 min"], ["Failure", "503 · source unavailable"]],
+        code: "npx flyai config set FLYAI_API_KEY \"…\"\n# server prefers node_modules/.bin/flyai",
+        files: [["server.mjs", "server.mjs"], ["src/components/FlyAISheet.tsx", "src/components/FlyAISheet.tsx"]]
+      },
+      fliggy: {
+        kicker: "External", title: "Fliggy / 飞猪",
+        summary: "Real stays, sights, prices and booking links — the grounding layer for the plan.",
+        role: "FlyAI returns live hotel and POI inventory from Fliggy. The UI presents price, image, rating and a booking link; adding an item writes a normal block into the local trip. Prices are shown in CNY and converted at approximately ¥20 JPY / ¥1 CNY when added to the JPY plan.",
+        facts: [["Content", "hotels + sights"], ["Links", "Fliggy booking"], ["Currency", "CNY"], ["Conversion", "≈ ¥20 JPY / ¥1 CNY"]],
+        code: "// Live options → Stays / Sights\n// add(item) → normal Block { dayId, cost, note }",
+        files: [["src/components/FlyAISheet.tsx", "src/components/FlyAISheet.tsx"], ["docs/COMPETITION.md", "docs/COMPETITION.md"]]
+      },
+    };
+
+    const githubBase = "https://github.com/37chengshan/tripblocks/blob/main/";
+    const nodeButtons = [...document.querySelectorAll("[data-node]")];
+    const detailKicker = document.getElementById("detailKicker");
+    const detailTitle = document.getElementById("detailTitle");
+    const detailSummary = document.getElementById("detailSummary");
+    const detailRole = document.getElementById("detailRole");
+    const detailFacts = document.getElementById("detailFacts");
+    const detailCode = document.getElementById("detailCode");
+    const detailFiles = document.getElementById("detailFiles");
+    const edges = [...document.querySelectorAll(".edges path[data-from]")];
+
+    function selectNode(id) {
+      const node = NODES[id];
+      if (!node) return;
+      for (const button of nodeButtons) button.setAttribute("aria-pressed", String(button.dataset.node === id));
+      for (const edge of edges) edge.classList.toggle("is-hot", edge.dataset.from === id || edge.dataset.to === id);
+      detailKicker.textContent = node.kicker;
+      detailTitle.textContent = node.title;
+      detailSummary.textContent = node.summary;
+      detailRole.textContent = node.role;
+      detailFacts.replaceChildren();
+      for (const [label, value] of node.facts) {
+        const wrap = document.createElement("div");
+        const labelEl = document.createElement("span");
+        labelEl.className = "fact-label";
+        labelEl.textContent = label;
+        const valueEl = document.createElement("span");
+        valueEl.className = "fact-value";
+        valueEl.textContent = value;
+        wrap.append(labelEl, valueEl);
+        detailFacts.appendChild(wrap);
+      }
+      detailCode.textContent = node.code;
+      detailFiles.replaceChildren();
+      for (const [label, path] of node.files) {
+        const link = document.createElement("a");
+        link.href = githubBase + path;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.textContent = label + " ↗";
+        detailFiles.appendChild(link);
+      }
+    }
+
+    for (const button of nodeButtons) {
+      button.addEventListener("click", () => selectNode(button.dataset.node));
+    }
+    selectNode("ui");
+  </script>
+</body>
+</html>

@@ -1,10 +1,10 @@
 import { CalendarDays, CircleAlert, Map, Sparkles, Wallet } from "lucide-react";
 import { formatYen } from "../data";
 
-export type ViewKey = "board" | "map" | "budget";
+export type ViewKey = "canvas" | "board" | "map" | "budget";
 
 const items = [
-  { key: "board" as const, label: "Itinerary", icon: CalendarDays },
+  { key: "canvas" as const, label: "Itinerary", icon: CalendarDays },
   { key: "map" as const, label: "Route map", icon: Map },
   { key: "budget" as const, label: "Budget", icon: Wallet },
 ];
@@ -37,7 +37,7 @@ export function SideRail({
 
       <nav className="space-y-0.5 px-3">
         {items.map((item) => {
-          const active = view === item.key;
+          const active = view === item.key || (item.key === "canvas" && view === "board");
           const Icon = item.icon;
           return (
             <button
