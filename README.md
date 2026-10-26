@@ -12,7 +12,7 @@
 - **Editorial intro**：`site/index.html` — Tana 式编辑排版，所有视觉由内联 SVG / CSS 绘制，零照片。
 - **Demo workbench**：`site/demo.html` — 可拖拽的 Kansai 行程图、节点编辑、三组只读 Agent 对话；没有聊天输入框，不调用模型。
 - **Architecture map**：`site/architecture.html` — 从仓库实际代码绘制的交互式架构图（Archify-style）。
-- **GitHub Pages**：`.github/workflows/pages.yml` 将 `site/` 发布为 Pages；部署后路径为 `https://37chengshan.github.io/tripblocks/`、`/demo.html`、`/architecture.html`。GitHub Pages 由 `pages.yml` 发布。
+- **GitHub Pages**：`.github/workflows/pages.yml` 将 `site/` 发布为 Pages。部署地址： `https://37chengshan.github.io/tripblocks/`、`/demo.html`、`/architecture.html`。
 
 TripBlocks 是一个模块化的旅行计划台：把交通、住宿、体验、吃饭和留白做成可拖拽的「块」，让行程从一张待办清单变成可以呼吸的周计划。右侧的 **Wander** 接阿里云百炼 Managed Agent，实时读取当前计划；真正的酒店与景点库存由 **FlyAI / 飞猪** 提供。
 
