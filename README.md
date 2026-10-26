@@ -1,82 +1,82 @@
 # TripBlocks
 
-**A calmer way to plan a trip — the week as a live graph, not a generated itinerary.**
+**A live travel workbench where every conversation owns its own week.**
 
-TripBlocks is a local-first travel workspace. The plan is a live node tree: the trip at the root, the week's days chained down the canvas, and each day's transport, stays, food and experiences running left to right in time order. Drag a block and its day, start time and order change; cost and route follow. The traveler and an AI agent work on the same graph: Wander can propose a card, you accept, edit or discard it.
-
-Real hotel and attraction inventory comes from **FlyAI / Fliggy**, with prices, images and booking links; any result can become a block in a day.
+TripBlocks is a session-centric travel planner. The left rail is a list of conversations; each conversation has its own trip tree. The centre is that tree: a horizontal root → day → block graph that can be dragged, clicked and edited. The right rail is the same conversation, plus its token/context/cost usage and the agent's thinking stream.
 
 Built for the **2026 飞猪 AI 旅行创新大赛**.
 
 [Live landing](https://37chengshan.github.io/tripblocks/) ·
-[Demo workbench](https://37chengshan.github.io/tripblocks/demo.html) ·
-[Architecture map](https://37chengshan.github.io/tripblocks/architecture.html) ·
-[25 s demo video](docs/demo/tripblocks-demo.mp4) ·
+[Read-only demo](https://37chengshan.github.io/tripblocks/demo.html) ·
+[Architecture](https://37chengshan.github.io/tripblocks/architecture.html) ·
+[25.6 s demo video](docs/demo/tripblocks-demo.mp4) ·
 [Competition entry](https://github.com/modelstudioai/modelstudioai.github.io/issues/203)
 
-![TripBlocks workbench: itinerary sidebar, live node graph, and the Wander agent](docs/screenshots/canvas.png)
+![TripBlocks session workbench](docs/screenshots/sessions.png)
 
-## The thesis
+## Why it is different
 
-An itinerary is not a document. It is a set of coupled decisions: move one afternoon and the hotel night, the budget and the next morning all move with it. Most AI planners hide that coupling behind a chat transcript and a wall of generated text. TripBlocks keeps the plan itself as the interface — visible, editable and grounded in real inventory.
+Most itinerary tools collapse a trip into one long generated document. TripBlocks keeps **three things visible at once**:
 
-## What you can do
+1. **Conversations are the workspace.** “Make Day 5 lighter”, “Rainy-day Arashiyama” and “Cut ¥30k without losing tea” are three independent sessions with different trees, budgets and saved transcripts. Switching sessions switches the graph, not just the chat text.
+2. **The tree is the plan.** Drag a block across a day row to change its day, time and order; drag within a row to reorder. Click any node to edit its title, place, start time, duration, cost and note. The graph is derived from the same trip data as the board, budget and route.
+3. **The agent is inspectable.** The right panel shows the conversation, a usage block (model, input/output tokens, estimated cost, context used/limit, runtime) and a collapsible thinking stream. The agent can propose a block, but nothing is added until the traveller accepts it.
+4. **Real inventory.** FlyAI / Fliggy results add live hotels and attractions, with images, prices and booking links, into any day.
+5. **Local-first.** Sessions, trees, transcripts, usage and node positions persist in `localStorage`; export is plain JSON.
 
-- **Plan on a living canvas.** Itinerary, route and budget in the left sidebar; a trip → day → block graph in the center; Wander on the right. Add, select, drag and edit without leaving the canvas.
-- **Drag means reschedule.** Crossing a day lane rewrites `dayId`, start time and order; dropping inside a day reorders and re-times. Node positions are layout state, not the schedule.
-- **Ask an agent that sees the whole plan.** Wander receives a compacted itinerary — days, places, times, costs, notes — and answers briefly. It may return one suggested block. Suggestions arrive as cards; nothing enters the plan until you add it.
-- **Ground it in real inventory.** From Board view, Live options searches Fliggy through FlyAI for stays and things to do, with images, prices, addresses and booking links. Add a result to any day.
-- **Keep the week honest.** Route map, daily spend, remaining budget and pace are visible in the same workspace, not a separate report.
-- **Stay local-first.** The plan and canvas positions persist in `localStorage`; export is a JSON file. No sign-in to edit, no hosted plan state.
+## The shell
 
-## See it
+```text
+┌────────────────────────────────────────────────────────────┐
+│ 48px titlebar · session title · status · share/export     │
+├──────────────┬───────────────────────────┬─────────────────┤
+│ conversations│ live node tree            │ conversation    │
+│ 288px        │ root → days → blocks      │ 384px           │
+│ / 64px rail  │ drag · edit · fit · pan   │ usage · thought │
+│              │                           │ composer        │
+└──────────────┴───────────────────────────┴─────────────────┘
+```
 
-| Live FlyAI inventory | Demo workbench |
+- The left rail collapses to a 64px icon rail and remembers the state.
+- The right panel collapses to a 48px hook and remembers the state.
+- The shell uses neutral CDS surfaces (`#f9f9f7` rail, `#fcfcfb` centre/right, `#fff` cards), a single clay accent (`#d97757`), neutral hairlines and no page grain.
+- The editorial landing is deliberately separate; it uses SVG/CSS geometry and no photography.
+
+## Screens
+
+| Session workbench | Read-only demo |
 |---|---|
-| ![FlyAI stays with prices and booking links](docs/screenshots/flyai-stays.png) | ![Demo workbench with the Kansai graph and saved conversations](docs/screenshots/demo.png) |
-| *Real Fliggy stays, prices and booking links, addable to a day.* | *The full Kansai graph and saved conversations. No composer.* |
+| ![Session workbench](docs/screenshots/sessions.png) | ![Read-only demo](docs/screenshots/demo.png) |
 
-| Landing | Architecture |
+| Editorial landing | Architecture |
 |---|---|
-| ![Editorial TripBlocks landing page](docs/screenshots/landing.png) | ![Interactive architecture map](docs/screenshots/architecture.png) |
-| *An editorial field note, drawn in SVG and CSS.* | *The real request paths, node by node.* |
+| ![Landing](docs/screenshots/landing.png) | ![Architecture](docs/screenshots/architecture.png) |
 
-The three public pages are deliberately separate:
-
-- **Landing** — the product argument and a way into the workbench.
-- **Demo workbench** — a static version of the Kansai plan with read-only conversations. Drag and edit nodes locally; two saved Managed Agent conversations and one saved local draft; **no composer, no model, no inventory calls**.
-- **Architecture map** — an interactive map of the actual request paths.
+- **Landing** — the argument, the field-note visual language and links into the demo.
+- **Demo workbench** — three conversations with three frozen trees, read-only transcripts, usage and thinking. The graph is locally draggable/editable; there is **no chat composer** and no model call.
+- **Full workbench** — local app with live Managed Agent and FlyAI bridges.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  UI["React workbench<br/>canvas · inspector · route · budget"]
-  Bridge["Local Node bridge<br/>server.mjs"]
-  Agent["Bailian Managed Agent<br/>managed-agent session run"]
-  Vault["Bailian Vault"]
-  FlyAI["FlyAI CLI"]
-  Fliggy["Fliggy inventory"]
-  Local["Local model<br/>optional fallback"]
-  Store[("localStorage<br/>plan · positions")]
-
-  UI -->|"POST /api/agent"| Bridge
-  UI -->|"GET /api/flyai"| Bridge
-  Bridge -->|"one run per message"| Agent
-  Agent --> Vault
-  Bridge -->|"search-hotel / search-poi"| FlyAI
-  FlyAI --> Fliggy
-  Bridge -.->|"AGENT_FALLBACK=on"| Local
-  UI --- Store
+  UI["React workbench<br/>session rail · node tree · chat"] -->|POST /api/agent| Bridge["Local Node bridge"]
+  UI -->|GET /api/flyai| Bridge
+  Bridge -->|"bl managed-agent session run"| Agent["Bailian Managed Agent"]
+  Agent --> Vault["Bailian Vault"]
+  Bridge -->|search-hotel / search-poi| FlyAI["FlyAI CLI"]
+  FlyAI --> Fliggy["Fliggy inventory"]
+  Bridge -.->|optional fallback| Local["Local OpenAI-compatible model"]
+  UI --- Store[("localStorage<br/>sessions · trees · usage")]
 ```
 
-The bridge is deliberately small. `/api/agent` sends the compacted trip and the user message in a single `bl managed-agent session run` call — a 55 s browser timeout and a 52 s CLI timeout, no polling, no background loop. `/api/flyai` shells out to the official FlyAI CLI and caches results for 10 minutes. If the Managed Agent call fails, the bridge can retry a local OpenAI-compatible model (`LOCAL_MODEL_BASE_URL`, default `http://127.0.0.1:10100/v1`); set `AGENT_FALLBACK=off` to disable the retry and return a 503.
+Keys stay server-side. `/api/agent` runs Managed Agent only on a user message, one call per turn, with a 55 s browser timeout; `/api/flyai` shells out to the official FlyAI CLI and caches for 10 minutes. If the agent bridge is unavailable, responses are explicitly labelled as local fallback/local draft.
 
-Replies carry `source: managed-agent` or `source: local`, and the UI labels them. If no model is reachable at all, the frontend uses a deterministic draft and marks it local — it never presents canned text as a model answer. API keys live in the Bailian CLI/Vault or the server environment, never in the page.
+[Explore the interactive architecture map →](https://37chengshan.github.io/tripblocks/architecture.html)
 
-## Run locally
+## Run
 
-Requirements: **Node 20.19+ or 22.12+** and npm. The live agent and FlyAI inventory need a funded Bailian account and a FlyAI key; the public demo needs neither.
+Requirements: Node 20.19+ / 22.12+, npm. The public demo needs no credentials; the live workbench needs a funded Bailian account and a FlyAI key.
 
 ```bash
 npm install
@@ -86,74 +86,70 @@ npm run dev:all
 - Web: `http://127.0.0.1:5173`
 - API bridge: `http://127.0.0.1:8787`
 
-`npm run dev` starts Vite alone. The canvas still works, but the agent falls back to the local draft and inventory stays unavailable.
-
-### Credentials
-
 ```bash
-# Bailian Managed Agent — bailian-cli is already a dev dependency
+# Bailian Managed Agent
 npx bl auth login --console
 
-# FlyAI / Fliggy inventory
+# FlyAI / Fliggy
 npx flyai config set FLYAI_API_KEY "your-key"
 ```
 
-Agent definitions live in `agent/agents.yaml` (`admin`, environment `dev-2`, Vault `admin`). The bridge invokes it with `--file agent/agents.yaml`. Keep real credentials in the CLI, Vault or environment, never in this repository or the browser.
+Agent resources live in `agent/agents.yaml`; the bridge uses `--file agent/agents.yaml` and environment `dev-2`, Vault `admin`.
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `PORT` | `8787` | Bridge port |
 | `BL_BIN` | local `.bin/bl`, else `bl` | Bailian CLI |
-| `FLYAI_BIN` | `node_modules/.bin/flyai`, else `flyai` | FlyAI CLI |
-| `AGENT_FALLBACK` | `on` | Set `off` to disable the local-model retry |
-| `LOCAL_MODEL_BASE_URL` | `http://127.0.0.1:10100/v1` | Fallback OpenAI-compatible endpoint |
-| `LOCAL_MODEL` | `intern/qwen3.8-27b` | Fallback model |
-| `DASHSCOPE_API_KEY`, `BAILIAN_BASE_URL` | — | Read by `agent/agents.yaml` when set |
-
-## Project map
-
-```text
-src/
-  App.tsx                 plan state, views, agent and FlyAI wiring
-  components/
-    CanvasBoard.tsx       React Flow canvas; drag → day, start, order
-    TripBoard.tsx         alternate day board with Live options
-    Inspector.tsx         block editor
-    Companion.tsx         Wander conversation UI
-    FlyAISheet.tsx        live stay / POI inventory
-    RouteMap.tsx          route view
-    BudgetView.tsx        spend view
-  lib/agent.ts            /api/agent client + labeled local draft
-  data.ts                 seeded 7-day Kansai trip
-server.mjs                local bridge and production static server
-agent/                    Managed Agent config and resource state
-site/                     Pages bundle: landing, demo, architecture
-docs/COMPETITION.md       requirement mapping and 3-minute demo script
-docs/screenshots/         README images
-docs/demo/                25.6 s demo video
-.github/workflows/        Pages deployment
-```
+| `FLYAI_BIN` | `node_modules/.bin/flyai` | FlyAI CLI |
+| `AGENT_FALLBACK` | `on` | Set `off` to disable the local-model fallback |
+| `LOCAL_MODEL_BASE_URL` | `http://127.0.0.1:10100/v1` | Optional fallback endpoint |
+| `LOCAL_MODEL` | `intern/qwen3.8-27b` | Optional fallback model |
 
 ## Competition mapping
 
 | Requirement | Implementation |
 |---|---|
-| Bailian Managed Agent | `server.mjs` calls `bl managed-agent session run`; config in `agent/agents.yaml` |
-| Vault binding | Agent bound to Vault `admin`; API keys stay server-side |
-| FlyAI Skill / CLI | Official `@fly-ai/flyai-cli`; `/api/flyai` runs `search-hotel` and `search-poi` |
-| Real hotel / attraction inventory | Live options sheet with images, prices, addresses and Fliggy links |
-| Reproducible product | Public landing, demo and architecture pages; 25.6 s video; `npm install && npm run dev:all` |
-| Competition submission | [issue #203](https://github.com/modelstudioai/modelstudioai.github.io/issues/203) |
+| Bailian Managed Agent | `/api/agent` → `bl managed-agent session run`; config in `agent/` |
+| Vault | Agent bound to Vault; keys never reach the browser |
+| FlyAI Skill / CLI | Official `@fly-ai/flyai-cli`; `/api/flyai` searches stays and attractions |
+| Session workbench | Three saved conversations, each with its own tree, transcript, usage and thinking |
+| Live inventory | Hotel/attraction sheet with images, prices, addresses and Fliggy links |
+| Submission | [issue #203](https://github.com/modelstudioai/modelstudioai.github.io/issues/203) |
 
-**Live status:** FlyAI is live. The Managed Agent runs live once the Bailian account has credit and an API key is created. The public Pages build stays static by design.
+**Status:** Managed Agent is live after account recharge/API-key creation; FlyAI is live. The GitHub Pages build is intentionally static — the demo has no chat composer and makes no model or inventory calls.
 
 ## Limits
 
-- **The Pages demo is a static snapshot.** It has no chat backend or composer and makes no model or inventory calls. The full loop needs local Node plus Bailian/FlyAI credentials.
-- **Currency is approximate.** FlyAI prices are CNY; adding a priced result to the JPY plan converts at ≈ ¥20 JPY / ¥1 CNY and writes the estimate into the block note.
-- **No booking execution.** Payments, ticketing, multi-user sync and live flight availability are not implemented.
-- **The agent is single-turn.** It proposes at most one block per reply and never writes to the plan without confirmation.
+- The Pages demo is a static snapshot; the full composer and live bridges require local Node plus credentials.
+- FlyAI prices are CNY; adding to the JPY plan uses ≈¥20 JPY / ¥1 CNY and writes the estimate into the note.
+- No payments, booking execution, multi-user sync or flight ticketing.
+- The agent is single-turn; it proposes at most one block per reply and never writes without confirmation.
+
+## Project map
+
+```text
+src/
+  App.tsx                 session store, active tree, views, agent/FlyAI wiring
+  components/
+    SideRail.tsx          288px conversation rail / 64px icon rail
+    CanvasBoard.tsx       React Flow tree; drag→day/time/order; fit/pan
+    Companion.tsx         transcript · usage · thinking · composer
+    TripBoard.tsx         alternate day board
+    Inspector.tsx         node editor
+    FlyAISheet.tsx        live stay / attraction inventory
+  data.ts                 three seeded sessions, trees, usage, thinking
+server.mjs                /api/agent, /api/flyai, static server
+site/                     editorial landing, read-only demo, architecture
+agent/                    Managed Agent config and resource state
+docs/COMPETITION.md       competition mapping and demo script
+docs/demo/                25.6 s demo video
+.github/workflows/        GitHub Pages deployment
+```
+
+## Design notes
+
+The workbench follows the open-claude-ui CDS language: neutral surfaces, 12px cards, 8/10/12/16/999 radii, 1px alpha hairlines, clay accent only for state/action, 14px conversation body, 11px meta, 580 semibold headings. Thinking uses a CSS grid `0fr/1fr` accordion; near-bottom chat pinning uses a 40px tolerance and a 150ms permission window; motion is transform/opacity, 60–300ms, with `prefers-reduced-motion` fallbacks.
 
 ## License
 
-No open-source license is declared yet; the source is published for the competition and review. Add a license before reuse. Third-party names, inventory imagery and booking links belong to their respective owners.
+No open-source license is declared yet; source is published for the competition and review. Third-party names, inventory imagery and booking links belong to their respective owners.

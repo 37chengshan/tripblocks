@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, CalendarDays, Check, Clock3, Lock, MapPin, Trash2, X } from "lucide-react";
 import { kindMeta } from "../data";
+import { useDialogFocus } from "../lib/useDialogFocus";
 import type { Block, BlockKind } from "../types";
 import { KindIcon } from "./KindIcon";
 
 const kinds: BlockKind[] = ["explore", "food", "travel", "stay", "reset"];
+
+const inputClass =
+  "w-full rounded-[10px] border border-black/10 bg-white px-3 py-2.5 text-[14px] leading-5 text-ink outline-none transition-colors duration-150 placeholder:text-[#8a8a8a] focus:border-clay/60";
+const labelClass = "mb-1.5 block text-[11px] font-medium tracking-[0.1em] text-[#6d6b67]";
 
 export function Inspector({
   block,
@@ -20,44 +25,61 @@ export function Inspector({
   onDelete: (id: string) => void;
 }) {
   const [draft, setDraft] = useState(block);
+  const panelRef = useDialogFocus<HTMLElement>(onClose);
 
   useEffect(() => {
     setDraft(block);
   }, [block]);
 
-  const set = <K extends keyof Block>(key: K, value: Block[K]) => setDraft((prev) => ({ ...prev, [key]: value }));
+  const set = <K extends keyof Block>(key: K, value: Block[K]) =>
+    setDraft((prev) => ({ ...prev, [key]: value }));
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <button aria-label="Close details" className="absolute inset-0 bg-ink/20 backdrop-blur-[2px]" onClick={onClose} />
-      <aside className="animate-in relative flex h-full w-full flex-col border-l border-line bg-card shadow-2xl sm:w-[390px]">
-        <div className="flex items-center justify-between border-b border-line/70 px-5 py-4">
-          <button onClick={onClose} className="flex items-center gap-1.5 text-[11px] text-muted transition hover:text-ink">
+      <button aria-label="Close details" className="absolute inset-0 bg-black/20" onClick={onClose} />
+      <aside
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Block details"
+        className="animate-in relative flex h-full w-full flex-col border-l border-black/10 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.12)] sm:w-[400px]"
+      >
+        <div className="flex items-center justify-between border-b border-black/10 px-5 py-3.5">
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1.5 text-[12px] text-[#525252] transition-colors duration-150 hover:text-ink"
+          >
             <ArrowLeft size={13} /> Back to plan
           </button>
-          <button onClick={onClose} className="rounded-full p-1.5 text-faint transition hover:bg-paper hover:text-ink" aria-label="Close">
+          <button
+            onClick={onClose}
+            className="grid h-7 w-7 place-items-center rounded-lg text-[#6d6b67] transition-colors duration-150 hover:bg-black/5 hover:text-ink"
+            aria-label="Close"
+          >
             <X size={16} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-5">
-          <div className="flex items-center gap-2 text-[9px] font-medium tracking-[0.16em] text-faint">
+          <div className="flex items-center gap-2 text-[11px] font-medium tracking-[0.12em] text-[#6d6b67]">
             <span>BLOCK DETAILS</span>
             {block.locked && (
-              <span className="flex items-center gap-1 rounded-full bg-sun-soft px-1.5 py-0.5 text-[8px] tracking-normal text-[#87652d]">
-                <Lock size={8} /> booked
+              <span className="flex items-center gap-1 rounded-full bg-black/[.05] px-1.5 py-0.5 text-[11px] tracking-normal text-[#525252]">
+                <Lock size={10} /> booked
               </span>
             )}
           </div>
-          <h2 className="mt-2 font-display text-[32px] leading-[1.03]">{draft.title || "Untitled block"}</h2>
-          <div className="mt-2 flex items-center gap-2 text-[11px] text-muted">
-            <CalendarDays size={12} /> {dayLabel}
-            <span className="text-line">·</span>
-            <Clock3 size={12} /> {draft.start} · {draft.duration} min
+          <h2 className="mt-2 text-[20px] font-semibold leading-7 tracking-[-0.01em] text-ink">
+            {draft.title || "Untitled block"}
+          </h2>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-[#525252]">
+            <CalendarDays size={12} className="text-[#8a8a8a]" /> {dayLabel}
+            <span className="text-black/20">·</span>
+            <Clock3 size={12} className="text-[#8a8a8a]" /> {draft.start} · {draft.duration} min
           </div>
 
           <div className="mt-6">
-            <div className="mb-2 text-[9px] font-medium tracking-[0.14em] text-faint">TYPE</div>
+            <div className={labelClass}>TYPE</div>
             <div className="flex flex-wrap gap-1.5">
               {kinds.map((kind) => {
                 const meta = kindMeta[kind];
@@ -66,11 +88,13 @@ export function Inspector({
                   <button
                     key={kind}
                     onClick={() => set("kind", kind)}
-                    className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] transition ${
-                      active ? "border-ink/20 bg-ink text-paper" : "border-line bg-card text-muted hover:border-ink/20"
+                    className={`flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] transition-colors duration-150 ${
+                      active
+                        ? "border-ink bg-ink text-white"
+                        : "border-black/10 bg-white text-[#525252] hover:border-black/20 hover:text-ink"
                     }`}
                   >
-                    <KindIcon kind={kind} size={11} />
+                    <KindIcon kind={kind} size={12} />
                     {meta.label}
                   </button>
                 );
@@ -80,86 +104,93 @@ export function Inspector({
 
           <div className="mt-5 space-y-4">
             <label className="block">
-              <span className="mb-1.5 block text-[9px] font-medium tracking-[0.14em] text-faint">WHAT</span>
+              <span className={labelClass}>WHAT</span>
               <input
                 value={draft.title}
                 onChange={(event) => set("title", event.target.value)}
-                className="w-full rounded-lg border border-line bg-paper/40 px-3 py-2.5 text-[12px] outline-none transition placeholder:text-faint focus:border-clay/50 focus:bg-white"
+                className={inputClass}
                 placeholder="A name for this block"
               />
             </label>
             <label className="block">
-              <span className="mb-1.5 flex items-center gap-1.5 text-[9px] font-medium tracking-[0.14em] text-faint"><MapPin size={10} /> WHERE</span>
+              <span className={`flex items-center gap-1.5 ${labelClass}`}>
+                <MapPin size={11} /> WHERE
+              </span>
               <input
                 value={draft.place}
                 onChange={(event) => set("place", event.target.value)}
-                className="w-full rounded-lg border border-line bg-paper/40 px-3 py-2.5 text-[12px] outline-none transition placeholder:text-faint focus:border-clay/50 focus:bg-white"
+                className={inputClass}
                 placeholder="Neighborhood, address or station"
               />
             </label>
             <div className="grid grid-cols-3 gap-2">
               <label className="block">
-                <span className="mb-1.5 block text-[9px] font-medium tracking-[0.14em] text-faint">START</span>
+                <span className={labelClass}>START</span>
                 <input
                   type="time"
                   value={draft.start}
                   onChange={(event) => set("start", event.target.value)}
-                  className="w-full rounded-lg border border-line bg-paper/40 px-2.5 py-2.5 text-[11px] tabular-nums outline-none focus:border-clay/50 focus:bg-white"
+                  className={`${inputClass} px-2 tabular-nums`}
                 />
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-[9px] font-medium tracking-[0.14em] text-faint">MIN</span>
+                <span className={labelClass}>MIN</span>
                 <input
                   type="number"
                   min={15}
                   step={15}
                   value={draft.duration}
                   onChange={(event) => set("duration", Number(event.target.value))}
-                  className="w-full rounded-lg border border-line bg-paper/40 px-2.5 py-2.5 text-[11px] tabular-nums outline-none focus:border-clay/50 focus:bg-white"
+                  className={`${inputClass} px-2 tabular-nums`}
                 />
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-[9px] font-medium tracking-[0.14em] text-faint">JPY</span>
+                <span className={labelClass}>JPY</span>
                 <input
                   type="number"
                   min={0}
                   step={100}
                   value={draft.cost}
                   onChange={(event) => set("cost", Number(event.target.value))}
-                  className="w-full rounded-lg border border-line bg-paper/40 px-2.5 py-2.5 text-[11px] tabular-nums outline-none focus:border-clay/50 focus:bg-white"
+                  className={`${inputClass} px-2 tabular-nums`}
                 />
               </label>
             </div>
             <label className="block">
-              <span className="mb-1.5 block text-[9px] font-medium tracking-[0.14em] text-faint">A NOTE FOR LATER</span>
+              <span className={labelClass}>A NOTE FOR LATER</span>
               <textarea
                 value={draft.note}
                 onChange={(event) => set("note", event.target.value)}
                 rows={4}
-                className="w-full resize-none rounded-lg border border-line bg-paper/40 px-3 py-2.5 text-[12px] leading-relaxed outline-none transition placeholder:text-faint focus:border-clay/50 focus:bg-white"
+                className={`${inputClass} resize-none leading-5`}
                 placeholder="The tiny details that make it yours."
               />
             </label>
           </div>
 
-          <div className="mt-6 rounded-lg border border-line/60 bg-paper/35 p-3 text-[10px] leading-relaxed text-faint">
+          <div className="mt-6 rounded-[10px] border border-black/[.06] bg-[#fafafa] p-3 text-[11px] leading-4 text-[#6d6b67]">
             Changes are saved to this device. Wander sees the updated plan the next time you ask.
           </div>
         </div>
 
-        <div className="flex items-center gap-2 border-t border-line/70 px-5 py-4">
+        <div className="flex items-center gap-2 border-t border-black/10 px-5 py-3.5">
           <button
             onClick={() => onDelete(block.id)}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-2.5 text-[11px] text-faint transition hover:bg-clay-soft/50 hover:text-clay"
+            className="flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[12px] text-[#6d6b67] transition-colors duration-150 hover:bg-clay/10 hover:text-clay-deep"
           >
             <Trash2 size={13} /> Delete
           </button>
           <div className="flex-1" />
-          <button onClick={onClose} className="rounded-lg px-3 py-2.5 text-[11px] text-muted transition hover:text-ink">Cancel</button>
+          <button
+            onClick={onClose}
+            className="h-9 rounded-lg px-3 text-[12px] text-[#525252] transition-colors duration-150 hover:bg-black/5 hover:text-ink"
+          >
+            Cancel
+          </button>
           <button
             onClick={() => onSave(draft)}
             disabled={!draft.title.trim()}
-            className="flex items-center gap-1.5 rounded-lg bg-ink px-3.5 py-2.5 text-[11px] font-medium text-paper transition hover:bg-moss disabled:opacity-40"
+            className="flex h-9 items-center gap-1.5 rounded-lg bg-ink px-3.5 text-[12px] font-medium text-white transition-colors duration-150 hover:bg-[#2c2c2a] disabled:opacity-40"
           >
             <Check size={13} /> Save block
           </button>

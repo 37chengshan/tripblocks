@@ -1,7 +1,25 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, ChevronRight, CircleDot, CloudRain, Clock3, Plus, ShieldCheck, Sparkles, X } from "lucide-react";
-import { cityMeta, formatYen, kindMeta, quickPrompts } from "../data";
-import type { ChatMessage, Suggestion, Trip } from "../types";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  PanelRightClose,
+  Plus,
+  Sparkles,
+  X,
+} from "lucide-react";
+import {
+  cityMeta,
+  formatRuntime,
+  formatTokens,
+  formatYen,
+  kindMeta,
+  quickPrompts,
+  sessionStatusMeta,
+} from "../data";
+import type { Session, Suggestion } from "../types";
 import { KindIcon } from "./KindIcon";
 
 /** Slack below the last message that still counts as "reading the latest". */
@@ -19,23 +37,26 @@ function scrollToLatest(node: HTMLElement, smooth: boolean) {
 }
 
 export function Companion({
-  trip,
-  messages,
-  thinking,
+  session,
+  running,
   onSend,
   onAddSuggestion,
   onClose,
+  onCollapse,
   agentOnline = true,
 }: {
-  trip: Trip;
-  messages: ChatMessage[];
-  thinking: boolean;
+  session: Session;
+  running: boolean;
   onSend: (prompt: string) => void;
   onAddSuggestion: (suggestion: Suggestion) => void;
   onClose?: () => void;
+  onCollapse?: () => void;
   agentOnline?: boolean;
 }) {
+  const { trip, messages, usage, thinking } = session;
+  const thinkingStepsId = useId();
   const [value, setValue] = useState("");
+  const [openThinking, setOpenThinking] = useState(() => window.matchMedia("(min-width: 1280px)").matches);
   const scrollRef = useRef<HTMLDivElement>(null);
   const previousCount = useRef(messages.length);
   // Whether the reader was already at the live edge. Updated from scroll events
@@ -44,8 +65,28 @@ export function Companion({
   const lastScrollTop = useRef(0);
   const scrollFrame = useRef(0);
   const measureFrame = useRef(0);
+  const composingRef = useRef(false);
+  const compositionEndedAt = useRef(0);
   const [pinned, setPinned] = useState(true);
   const [unread, setUnread] = useState(0);
+
+  const status = sessionStatusMeta[session.status];
+  const contextPercent =
+    usage.contextMax > 0 ? Math.min(100, Math.round((usage.contextUsed / usage.contextMax) * 100)) : 0;
+  const totalTokens = usage.inputTokens + usage.outputTokens;
+  const doneSteps = thinking.filter((step) => step.status === "done").length;
+  const thinkingOpen = running || openThinking;
+  const statusLabel = running
+    ? "Thinking"
+    : session.sample
+      ? session.draft
+        ? "Saved local draft"
+        : "Saved example"
+      : session.status === "live"
+        ? "Live session"
+        : session.status === "saved"
+          ? "Saved session"
+          : "Local draft";
 
   useLayoutEffect(() => {
     const node = scrollRef.current;
@@ -101,13 +142,17 @@ export function Companion({
   }, [messages]);
 
   useEffect(() => {
-    if (!thinking || !pinnedRef.current) return;
+    if (running) setOpenThinking(true);
+  }, [running]);
+
+  useEffect(() => {
+    if (!running || !pinnedRef.current) return;
     const frame = requestAnimationFrame(() => {
       const node = scrollRef.current;
       if (node && pinnedRef.current) scrollToLatest(node, true);
     });
     return () => cancelAnimationFrame(frame);
-  }, [thinking]);
+  }, [running]);
 
   const handleScroll = () => {
     if (measureFrame.current) return;
@@ -146,7 +191,7 @@ export function Companion({
 
   const send = () => {
     const prompt = value.trim();
-    if (!prompt || thinking) return;
+    if (!prompt || running) return;
     pinnedRef.current = true;
     setPinned(true);
     setUnread(0);
@@ -155,38 +200,196 @@ export function Companion({
   };
 
   return (
-    <aside className="flex h-full min-h-0 w-full flex-col border-l border-line/70 bg-[#f7f3ea] xl:w-[374px]">
-      <div className="flex items-start justify-between border-b border-line/60 px-4 pb-3.5 pt-4">
-        <div className="flex items-center gap-2.5">
-          <div className="relative grid h-9 w-9 place-items-center rounded-full bg-ink text-paper">
-            <Sparkles size={15} />
-            <span
-              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#f7f3ea] ${
-                agentOnline ? "animate-breathe bg-[#7b9a6c]" : "bg-sun"
-              }`}
-            />
-          </div>
-          <div>
+    <aside className="flex h-full min-h-0 w-full flex-col border-l border-line bg-surface-1 xl:w-full">
+      <header className="flex h-[52px] shrink-0 items-center justify-between gap-2 border-b border-hairline bg-surface-1 px-4">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span
+            className={`h-1.5 w-1.5 shrink-0 rounded-full ${running ? "animate-breathe bg-clay" : status.dotClass}`}
+            aria-hidden="true"
+          />
+          <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-[12px] font-medium">Wander</span>
-              <span className="rounded-full border border-line/80 px-1.5 py-0.5 text-[8px] tracking-[0.06em] text-faint">AGENT</span>
+              <h2 className="truncate text-[13px] font-semibold leading-4 text-ink">{session.title}</h2>
+              {session.sample && (
+                <span className="shrink-0 rounded-full bg-black/[.05] px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-[0.04em] text-muted">
+                  Sample
+                </span>
+              )}
+              {session.draft && (
+                <span className="shrink-0 rounded-full bg-sun-soft px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-[0.04em] text-clay-ink">
+                  Draft
+                </span>
+              )}
             </div>
-            <div className="mt-0.5 flex items-center gap-1 text-[9px] text-muted">
-              <CircleDot size={9} className={agentOnline ? "text-moss" : "text-sun"} /> {agentOnline ? "Knows this plan · live" : "Local fallback · agent offline"}
+            <div className="mt-0.5 truncate font-mono text-[11px] leading-3 text-muted">
+              {statusLabel} · {session.meta}
             </div>
           </div>
         </div>
-        {onClose && (
-          <button onClick={onClose} className="rounded-full p-1.5 text-faint motion-colors hover:bg-paper hover:text-ink xl:hidden" aria-label="Close Wander">
-            <X size={16} />
-          </button>
-        )}
-      </div>
+        <div className="flex shrink-0 items-center gap-0.5">
+          {onCollapse && (
+            <button
+              onClick={onCollapse}
+              className="hidden h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-black/[.04] hover:text-ink xl:grid"
+              aria-label="Collapse chat panel"
+              aria-expanded
+              aria-controls="companion-panel"
+              title="Collapse chat panel"
+            >
+              <PanelRightClose size={15} />
+            </button>
+          )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-black/[.04] hover:text-ink xl:hidden"
+              aria-label="Close conversation"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      </header>
 
-      <div className="mx-4 mt-3 flex items-center justify-between rounded-lg border border-line/60 bg-card/55 px-3 py-2 text-[9px] text-muted">
-        <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-clay" /> 7 days · {trip.pace.toLowerCase()} pace</span>
-        <span className="tabular-nums">{formatYen(trip.budget)} cap</span>
-      </div>
+      <section aria-label="Session usage" className="shrink-0 border-b border-hairline px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-muted">
+            Usage
+          </span>
+          <span className="max-w-[62%] truncate rounded-full bg-black/[.04] px-2 py-0.5 font-mono text-[11px] text-muted">
+            {usage.model}
+          </span>
+        </div>
+        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+          <div>
+            <dt className="text-[11px] leading-4 text-muted">Tokens</dt>
+            <dd className="text-[16px] font-semibold leading-5 tabular-nums text-ink">
+              {formatTokens(totalTokens)}
+            </dd>
+            <dd className="font-mono text-[11px] leading-4 text-muted">
+              {formatTokens(usage.inputTokens)} in · {formatTokens(usage.outputTokens)} out
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[11px] leading-4 text-muted">Cost</dt>
+            <dd className="text-[16px] font-semibold leading-5 tabular-nums text-ink">
+              {usage.estimatedCostJpy > 0 ? formatYen(usage.estimatedCostJpy) : "—"}
+            </dd>
+            <dd className="font-mono text-[11px] leading-4 text-muted">estimated</dd>
+          </div>
+          <div className="col-span-2">
+            <div className="flex items-center justify-between gap-2 text-[11px] leading-4 text-muted">
+              <dt>Context</dt>
+              <dd className="truncate font-mono tabular-nums">
+                {contextPercent}% · {formatTokens(usage.contextUsed)} / {formatTokens(usage.contextMax)}
+              </dd>
+            </div>
+            <div
+              className="mt-1 h-[3px] overflow-hidden rounded-full bg-black/[.08]"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={contextPercent}
+              aria-label="Context used"
+            >
+              <div className="h-full rounded-full bg-clay" style={{ width: `${contextPercent}%` }} />
+            </div>
+          </div>
+          <div>
+            <dt className="text-[11px] leading-4 text-muted">Runtime</dt>
+            <dd className="text-[13px] font-medium leading-5 tabular-nums text-ink">
+              {formatRuntime(usage.runtimeMs)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[11px] leading-4 text-muted">Context left</dt>
+            <dd className="text-[13px] font-medium leading-5 tabular-nums text-ink">
+              {formatTokens(Math.max(0, usage.contextMax - usage.contextUsed))}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      {thinking.length > 0 && (
+        <section className="shrink-0 border-b border-hairline" aria-label="Thinking stream">
+          <button
+            type="button"
+            onClick={() => {
+              if (!running) setOpenThinking((open) => !open);
+            }}
+            disabled={running}
+            aria-expanded={thinkingOpen}
+            aria-controls={thinkingStepsId}
+            className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left disabled:cursor-default"
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              {running ? (
+                <span className="flex shrink-0 items-center gap-[3px]" aria-hidden="true">
+                  <span className="thinking-dot h-[3px] w-[3px] rounded-full bg-clay" />
+                  <span className="thinking-dot h-[3px] w-[3px] rounded-full bg-clay" />
+                  <span className="thinking-dot h-[3px] w-[3px] rounded-full bg-clay" />
+                </span>
+              ) : (
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-clay" aria-hidden="true" />
+              )}
+              <span className="truncate text-[12px] font-medium text-ink">
+                {running ? "Thinking…" : `Thought for ${formatRuntime(usage.runtimeMs)}`}
+              </span>
+              <span className="shrink-0 font-mono text-[11px] text-muted">
+                {doneSteps}/{thinking.length}
+              </span>
+            </span>
+            <ChevronDown
+              size={14}
+              className={`shrink-0 text-muted transition-transform duration-200 ${
+                thinkingOpen ? "rotate-180" : ""
+              }`}
+              aria-hidden="true"
+            />
+          </button>
+          <div
+            id={thinkingStepsId}
+            className={`grid transition-[grid-template-rows] duration-200 ease-[cubic-bezier(0.19,1,0.22,1)] ${
+              thinkingOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+            }`}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <ol className="space-y-2.5 px-4 pb-3">
+                {thinking.map((step) => (
+                  <li key={step.id} className="flex gap-2.5">
+                    <span className="mt-[2px] grid h-3.5 w-3.5 shrink-0 place-items-center">
+                      {step.status === "done" ? (
+                        <Check size={12} className="text-moss" aria-hidden="true" />
+                      ) : step.status === "active" ? (
+                        <span className="h-1.5 w-1.5 animate-breathe rounded-full bg-clay" aria-hidden="true" />
+                      ) : (
+                        <span className="h-2 w-2 rounded-full border border-line" aria-hidden="true" />
+                      )}
+                      <span className="sr-only">
+                        {step.status === "done"
+                          ? "Done: "
+                          : step.status === "active"
+                            ? "In progress: "
+                            : "Pending: "}
+                      </span>
+                    </span>
+                    <span className="min-w-0">
+                      <span
+                        className={`block text-[12px] leading-4 ${
+                          step.status === "active" ? "font-medium text-clay-ink" : "text-ink"
+                        }`}
+                      >
+                        {step.label}
+                      </span>
+                      <span className="block font-mono text-[11px] leading-4 text-muted">{step.detail}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="relative min-h-0 flex-1">
         <div
@@ -195,27 +398,45 @@ export function Companion({
           role="log"
           aria-live="polite"
           aria-relevant="additions"
-          aria-label="Conversation with Wander"
+          aria-busy={running}
+          aria-label={`Conversation with Wander about ${session.title}`}
           className="h-full overflow-y-auto overscroll-contain px-4 py-4"
         >
           <div className="space-y-5">
+            {messages.length === 0 && !running && (
+              <div className="flex min-h-full flex-col justify-center py-8">
+                <p className="font-display text-[28px] leading-tight text-ink">Where should we start?</p>
+                <p className="mt-2 text-[13px] leading-5 text-muted">
+                  This is a new branch of “{trip.title}”. Ask me to lighten a day, cut a cost, or protect
+                  something you do not want to lose.
+                </p>
+              </div>
+            )}
+
             {messages.map((message) => (
               <div
                 key={message.id}
                 className={`animate-msg-in flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 {message.role === "user" ? (
-                  <div className="max-w-[88%] rounded-2xl rounded-br-md bg-ink px-3.5 py-2.5 text-[11.5px] leading-relaxed text-paper">
+                  <div className="max-w-[85%] rounded-[18px] bg-user-bubble px-4 py-3 text-[14px] leading-5 text-user-ink shadow-[0_1px_2px_rgba(0,0,0,.04)]">
                     {message.text}
                   </div>
                 ) : (
                   <div className="w-full">
-                    <div className="whitespace-pre-wrap text-[11.5px] leading-[1.75] text-[#3e423a]">
-                      {message.text}
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted">
+                      <span className="grid h-5 w-5 place-items-center rounded-lg bg-clay text-white">
+                        <Sparkles size={11} />
+                      </span>
+                      <span className="font-medium text-ink">Wander</span>
+                      <span className="rounded-full bg-black/[.04] px-1.5 py-0.5 font-mono text-[11px]">
+                        {usage.model}
+                      </span>
+                      {message.source === "local" && <span className="font-mono">· local</span>}
                     </div>
-                    {message.source === "local" && (
-                      <div className="mt-1.5 text-[8px] tracking-[0.08em] text-faint">LOCAL FALLBACK — AGENT BRIDGE UNAVAILABLE</div>
-                    )}
+                    <p className="mt-1.5 whitespace-pre-wrap text-[14px] leading-5 text-ink">
+                      {message.text}
+                    </p>
                     {message.suggestion && (
                       <SuggestionCard
                         suggestion={message.suggestion}
@@ -227,54 +448,18 @@ export function Companion({
                 )}
               </div>
             ))}
-            {thinking && (
-              <div className="animate-fade flex items-center gap-2 text-[10px] text-muted">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-ink text-paper">
-                  <Sparkles size={11} />
-                </div>
-                <div className="flex items-center gap-1 rounded-full border border-line/80 bg-card/60 px-2.5 py-1.5">
-                  <span className="typing-dot h-1 w-1 rounded-full bg-muted" />
-                  <span className="typing-dot h-1 w-1 rounded-full bg-muted" />
-                  <span className="typing-dot h-1 w-1 rounded-full bg-muted" />
-                  <span className="ml-1 text-[9px] text-faint">reading your plan…</span>
-                </div>
-              </div>
-            )}
 
-            {messages.length === 1 && !thinking && (
-              <div className="mt-6 border-t border-line/65 pt-4">
-                <div className="flex items-center gap-1.5 text-[8.5px] font-medium tracking-[0.14em] text-faint">
-                  <span className="h-px w-3 bg-line" /> WHAT I AM HOLDING ONTO
-                </div>
-                <div className="mt-3 space-y-3">
-                  <div className="flex items-start gap-2.5">
-                    <ShieldCheck size={13} className="mt-0.5 shrink-0 text-moss" />
-                    <div>
-                      <div className="text-[10px] font-medium text-ink">The non-negotiables</div>
-                      <p className="mt-0.5 text-[9.5px] leading-relaxed text-muted">The tea ceremony, the machiya, and one genuinely empty evening.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <Clock3 size={13} className="mt-0.5 shrink-0 text-clay" />
-                    <div>
-                      <div className="text-[10px] font-medium text-ink">The seam to watch</div>
-                      <p className="mt-0.5 text-[9.5px] leading-relaxed text-muted">Day 5 ends at 21:00 in Osaka. Day 6 starts at 09:30 for Uji.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <CloudRain size={13} className="mt-0.5 shrink-0 text-sky" />
-                    <div>
-                      <div className="text-[10px] font-medium text-ink">The weather window</div>
-                      <p className="mt-0.5 text-[9.5px] leading-relaxed text-muted">Wednesday afternoon is the flexible one. Keep a museum up your sleeve.</p>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => onSend("What would you protect first if we had to cut the trip in half?")}
-                  className="mt-3 flex items-center gap-1 text-[9.5px] text-clay motion-colors hover:text-clay/75"
-                >
-                  Ask what I would protect <ChevronRight size={11} />
-                </button>
+            {running && (
+              <div className="animate-fade flex items-center gap-2 text-[11px] text-muted">
+                <span className="grid h-6 w-6 place-items-center rounded-lg bg-clay text-white">
+                  <Sparkles size={11} />
+                </span>
+                <span className="flex items-center gap-1 rounded-full bg-black/[.04] px-2.5 py-1.5">
+                  <span className="typing-dot h-1 w-1 rounded-full bg-muted" />
+                  <span className="typing-dot h-1 w-1 rounded-full bg-muted" />
+                  <span className="typing-dot h-1 w-1 rounded-full bg-muted" />
+                  <span className="ml-1">reading this tree…</span>
+                </span>
               </div>
             )}
           </div>
@@ -285,7 +470,7 @@ export function Companion({
             <button
               type="button"
               onClick={jumpToLatest}
-              className="pointer-events-auto animate-pop flex items-center gap-1.5 rounded-full border border-line bg-card/95 px-3 py-1.5 text-[9.5px] text-muted shadow-[0_10px_24px_-18px_rgba(30,33,29,.55)] backdrop-blur-sm motion-colors hover:border-clay/30 hover:text-clay"
+              className="pointer-events-auto animate-pop flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 py-1.5 text-[11px] text-muted shadow-[0_1px_2px_rgba(0,0,0,.05),0_2px_8px_rgba(0,0,0,.08)] transition-colors hover:border-black/20 hover:text-ink"
             >
               {unread > 0 ? `${unread} new ${unread === 1 ? "message" : "messages"}` : "Jump to latest"}
               <ArrowDown size={11} />
@@ -294,14 +479,14 @@ export function Companion({
         )}
       </div>
 
-      <div className="px-4 pb-3">
+      <div className="shrink-0 border-t border-hairline bg-surface-1 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3">
         <div className="mb-2 flex gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
           {quickPrompts.slice(0, 3).map((prompt) => (
             <button
               key={prompt}
               onClick={() => onSend(prompt)}
-              disabled={thinking}
-              className="shrink-0 rounded-full border border-line/80 bg-card/45 px-2.5 py-1.5 text-[9px] text-muted motion-colors hover:border-clay/30 hover:text-clay disabled:opacity-40"
+              disabled={running}
+              className="shrink-0 rounded-full bg-black/[.04] px-2.5 py-1.5 text-[11px] text-muted transition-colors hover:bg-black/[.07] hover:text-ink disabled:opacity-40"
             >
               {prompt}
             </button>
@@ -310,14 +495,32 @@ export function Companion({
         <form
           onSubmit={(event) => {
             event.preventDefault();
+            if (composingRef.current) return;
             send();
           }}
-          className="rounded-xl border border-line bg-card p-1.5 shadow-[0_8px_22px_-20px_rgba(30,33,29,.6)] motion-colors focus-within:border-clay/35"
+          className="composer-shell rounded-xl bg-surface-2 p-2"
         >
           <textarea
             value={value}
             onChange={(event) => setValue(event.target.value)}
+            onCompositionStart={() => {
+              composingRef.current = true;
+            }}
+            onCompositionEnd={() => {
+              composingRef.current = false;
+              compositionEndedAt.current = Date.now();
+            }}
             onKeyDown={(event) => {
+              // CJK IME: Enter confirms a candidate, it must not send.
+              // WebKit can fire keydown after compositionend, so keep a short guard.
+              if (
+                event.nativeEvent.isComposing ||
+                event.keyCode === 229 ||
+                composingRef.current ||
+                Date.now() - compositionEndedAt.current < 500
+              ) {
+                return;
+              }
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
                 send();
@@ -327,22 +530,35 @@ export function Companion({
             placeholder="Ask about the plan, or change it…"
             aria-label="Message Wander"
             enterKeyHint="send"
-            className="w-full resize-none rounded-lg bg-transparent px-2 py-1 text-[11.5px] leading-relaxed outline-none placeholder:text-faint focus-visible:outline-offset-0"
+            className="min-h-[48px] w-full resize-none bg-transparent px-1 py-1 text-[14px] leading-[1.45] text-ink outline-none placeholder:text-muted/60"
           />
-          <div className="flex items-center justify-between px-1 pb-0.5">
-            <span className="text-[8.5px] text-faint">Enter to send · Shift+Enter for a new line</span>
+          <div className="flex items-center justify-between gap-2 px-1 pb-0.5 pt-1">
+            <span className="hidden text-[11px] text-muted sm:block">
+              Enter to send · Shift+Enter for a new line
+            </span>
+            <span className="text-[11px] text-muted sm:hidden">Enter to send</span>
             <button
               type="submit"
-              disabled={!value.trim() || thinking}
-              className="grid h-7 w-7 place-items-center rounded-lg bg-clay text-white motion-ui hover:bg-clay-deep active:scale-95 disabled:opacity-30"
+              disabled={!value.trim() || running}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-clay text-white transition-transform hover:bg-clay-deep active:scale-95 disabled:opacity-30"
               aria-label="Send message"
             >
               <ArrowUp size={14} />
             </button>
           </div>
         </form>
-        <div className="mt-2 flex items-center justify-center gap-1 text-[8px] text-faint">
-          <span className={`h-1 w-1 rounded-full ${agentOnline ? "bg-moss" : "bg-sun"}`} /> {agentOnline ? "Managed Agent · grounded in your itinerary" : "Local fallback · agent unavailable"}
+        <div className="mt-2 flex items-center justify-center gap-1.5 font-mono text-[11px] text-muted">
+          <span
+            className={`h-1 w-1 rounded-full ${
+              session.sample ? "bg-muted/40" : agentOnline ? "bg-moss" : "bg-sun"
+            }`}
+            aria-hidden="true"
+          />
+          {session.sample
+            ? "Saved example · no live calls"
+            : agentOnline
+              ? "Managed Agent · grounded in this tree"
+              : "Local fallback · agent unavailable"}
         </div>
       </div>
     </aside>
@@ -355,36 +571,48 @@ function SuggestionCard({
   onAdd,
 }: {
   suggestion: Suggestion;
-  trip: Trip;
+  trip: Session["trip"];
   onAdd: () => void;
 }) {
   const day = trip.days.find((item) => item.id === suggestion.dayId);
   const city = day ? cityMeta[day.city] : null;
   const meta = kindMeta[suggestion.kind];
   return (
-    <div className="mt-3 overflow-hidden rounded-xl border border-clay/20 bg-card/80 shadow-[0_1px_0_rgba(255,255,255,.75)_inset]">
-      <div className="flex items-center justify-between border-b border-line/60 px-3 py-2">
-        <span className="flex items-center gap-1.5 text-[8.5px] font-medium tracking-[0.12em] text-clay"><Sparkles size={10} /> PROPOSED BLOCK</span>
-        <span className="text-[8.5px] text-faint">Day {suggestion.dayId} · {city?.name}</span>
+    <div className="mt-3 overflow-hidden rounded-xl border border-line bg-surface-2">
+      <div className="flex items-center justify-between gap-2 border-b border-hairline px-3 py-2">
+        <span className="flex items-center gap-1.5 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-clay-ink">
+          <Sparkles size={11} /> Proposed block
+        </span>
+        <span className="font-mono text-[11px] text-muted">
+          Day {suggestion.dayId} · {city?.name}
+        </span>
       </div>
       <div className="px-3 py-3">
         <div className="flex items-start gap-2.5">
-          <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full" style={{ color: meta.tone, background: meta.soft }}>
+          <div
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-lg"
+            style={{ color: meta.tone, background: meta.soft }}
+          >
             <KindIcon kind={suggestion.kind} size={13} />
           </div>
           <div className="min-w-0">
             <h4 className="text-[12px] font-medium leading-snug text-ink">{suggestion.title}</h4>
-            <p className="mt-0.5 text-[9.5px] text-muted">{suggestion.place}</p>
-            <p className="mt-1 text-[9px] text-faint">{suggestion.start} · {suggestion.duration} min · {suggestion.cost ? formatYen(suggestion.cost) : "free"}</p>
+            <p className="mt-0.5 text-[11px] leading-4 text-muted">{suggestion.place}</p>
+            <p className="mt-1 font-mono text-[11px] text-muted">
+              {suggestion.start} · {suggestion.duration} min ·{" "}
+              {suggestion.cost ? formatYen(suggestion.cost) : "free"}
+            </p>
           </div>
         </div>
-        <p className="mt-2 text-[9.5px] leading-relaxed text-muted">{suggestion.note}</p>
+        <p className="mt-2 text-[11px] leading-4 text-muted">{suggestion.note}</p>
         <button
           onClick={onAdd}
-          className="mt-3 flex w-full items-center justify-between rounded-lg border border-line bg-paper/45 px-2.5 py-2 text-[10px] text-ink motion-colors hover:border-clay/30 hover:bg-clay-soft/40"
+          className="mt-3 flex w-full items-center justify-between rounded-lg bg-black/[.04] px-2.5 py-2 text-[11px] text-ink transition-colors hover:bg-black/[.07]"
         >
-          <span className="flex items-center gap-1.5"><Plus size={11} /> Add to Day {suggestion.dayId}</span>
-          <ChevronRight size={12} className="text-faint" />
+          <span className="flex items-center gap-1.5">
+            <Plus size={11} /> Add to Day {suggestion.dayId}
+          </span>
+          <ChevronRight size={12} className="text-muted" />
         </button>
       </div>
     </div>

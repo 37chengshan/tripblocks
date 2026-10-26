@@ -1,22 +1,22 @@
-/* TripBlocks demo workbench — local graph editing, read-only saved conversations. */
+/* TripBlocks demo workbench — one saved conversation per trip tree. */
 (() => {
   "use strict";
 
-  const STORE_KEY = "tripblocks:demo:v1";
-  const STAGE_MIN_W = 1380;
-  const STAGE_MIN_H = 840;
-  const DAY_X = 340;
-  const DAY_Y = 48;
-  const DAY_ROW = 108;
-  const BLOCK_X = 600;
-  const BLOCK_PITCH = 190;
-  const ROOT = { x: 24, y: 29 };
-  const BUDGET = 260000;
+  const STORE_KEY = "tripblocks:demo:sessions:v2";
+  const STAGE_MIN_W = 786;
+  const STAGE_MIN_H = 690;
+  const ROOT = { x: 14, y: 14 };
+  const DAY_X = 14;
+  const DAY_Y = 136;
+  const DAY_PITCH = 106;
+  const BLOCK_Y0 = 238;
+  const BLOCK_PITCH = 98;
   const SIZES = {
-    root: { w: 230, h: 110 },
-    day: { w: 200, h: 72 },
-    block: { w: 168, h: 72 },
+    root: { w: 150, h: 92 },
+    day: { w: 96, h: 70 },
+    block: { w: 96, h: 84 },
   };
+  const BUDGET = 260000;
 
   const KIND = {
     travel: { label: "Move" },
@@ -26,71 +26,241 @@
     reset: { label: "Breathe" },
   };
 
-  const seedDays = [
-    { id: 1, label: "Fri", date: "06", month: "NOV", city: "kyoto", title: "Land & exhale" },
+  const TRIP = {
+    name: "Kansai, slowly",
+    when: "06 — 12 Nov 2026",
+    where: "Kyoto · Nara · Osaka · Uji",
+    budget: BUDGET,
+  };
+
+  const BASE_DAYS = [
+    { id: 1, label: "Fri", date: "06", month: "NOV", city: "kyoto", title: "Land & rest" },
     { id: 2, label: "Sat", date: "07", month: "NOV", city: "kyoto", title: "East Kyoto" },
     { id: 3, label: "Sun", date: "08", month: "NOV", city: "kyoto", title: "Arashiyama" },
     { id: 4, label: "Mon", date: "09", month: "NOV", city: "nara", title: "Nara day" },
     { id: 5, label: "Tue", date: "10", month: "NOV", city: "osaka", title: "Osaka, late" },
     { id: 6, label: "Wed", date: "11", month: "NOV", city: "uji", title: "Tea country" },
-    { id: 7, label: "Thu", date: "12", month: "NOV", city: "kyoto", title: "Slow goodbye" },
+    { id: 7, label: "Thu", date: "12", month: "NOV", city: "kyoto", title: "Goodbye" },
   ];
 
-  const seedBlocks = [
-    { id: "b1", dayId: 1, kind: "travel", title: "Haruka to Kyoto", place: "Kansai Airport → Kyoto Station", start: "09:40", duration: 75, cost: 2400, note: "Reserved seats, car 4" },
-    { id: "b2", dayId: 1, kind: "stay", title: "Machiya check-in", place: "Gion, Kyoto", start: "11:30", duration: 60, cost: 96000, note: "Six nights · luggage drop first" },
-    { id: "b3", dayId: 1, kind: "food", title: "Nishiki market crawl", place: "Nishiki Market", start: "13:30", duration: 120, cost: 5200, note: "Go hungry. Cash is useful." },
-    { id: "b4", dayId: 1, kind: "explore", title: "Pontocho at dusk", place: "Pontocho Alley", start: "18:30", duration: 90, cost: 3500, note: "No reservations — walk until something feels right." },
-    { id: "b5", dayId: 2, kind: "explore", title: "Fushimi Inari before crowds", place: "Fushimi Inari Taisha", start: "07:30", duration: 180, cost: 0, note: "Take the side path back down." },
-    { id: "b6", dayId: 2, kind: "food", title: "Udon at Okakura", place: "Higashiyama", start: "11:30", duration: 60, cost: 2400, note: "Small shop, short menu." },
-    { id: "b7", dayId: 2, kind: "explore", title: "Tea ceremony", place: "Higashiyama", start: "14:00", duration: 90, cost: 6000, note: "Booked under Chen · 2 guests" },
-    { id: "b8", dayId: 2, kind: "food", title: "Kaiseki dinner", place: "Gion Karyo", start: "19:00", duration: 120, cost: 18000, note: "The splurge. Go slowly." },
-    { id: "b9", dayId: 3, kind: "explore", title: "Bamboo grove, early", place: "Arashiyama", start: "09:00", duration: 90, cost: 0, note: "Before 9:30 it is still quiet." },
-    { id: "b10", dayId: 3, kind: "food", title: "Riverside soba", place: "Katsura River", start: "11:30", duration: 60, cost: 2800, note: "Window seat if you can." },
-    { id: "b11", dayId: 3, kind: "explore", title: "Monkey park + Okochi Sanso", place: "Arashiyama", start: "14:00", duration: 150, cost: 2200, note: "Wear shoes with grip." },
-    { id: "b12", dayId: 3, kind: "reset", title: "Free evening", place: "Kyoto", start: "18:00", duration: 120, cost: 0, note: "Nothing scheduled. Protect this." },
-    { id: "b13", dayId: 4, kind: "travel", title: "Kintetsu to Nara", place: "Kyoto → Nara", start: "08:30", duration: 45, cost: 1600, note: "Rapid express, 2 stops." },
-    { id: "b14", dayId: 4, kind: "explore", title: "Nara deer park", place: "Nara Park", start: "10:00", duration: 120, cost: 0, note: "Buy crackers once, not three times." },
-    { id: "b15", dayId: 4, kind: "food", title: "Todai-ji & lunch", place: "Nara", start: "12:30", duration: 150, cost: 3200, note: "Try the kakinoha sushi." },
-    { id: "b16", dayId: 4, kind: "travel", title: "Back to Kyoto", place: "Nara → Kyoto", start: "17:30", duration: 50, cost: 1600, note: "Beat the commuter rush." },
-    { id: "b17", dayId: 5, kind: "travel", title: "Limited express to Osaka", place: "Kyoto → Osaka", start: "09:30", duration: 55, cost: 2200, note: "Breakfast at the station." },
-    { id: "b18", dayId: 5, kind: "food", title: "Kuromon market", place: "Nihonbashi, Osaka", start: "11:30", duration: 90, cost: 4800, note: "Split everything." },
-    { id: "b19", dayId: 5, kind: "explore", title: "Osaka Castle", place: "Osaka Castle Park", start: "14:00", duration: 120, cost: 1200, note: "The park is free; the keep is optional." },
-    { id: "b20", dayId: 5, kind: "food", title: "Dotonbori after dark", place: "Dotonbori", start: "18:30", duration: 150, cost: 7600, note: "Late train back is fine." },
-    { id: "b21", dayId: 6, kind: "travel", title: "Uji by local train", place: "Kyoto → Uji", start: "09:30", duration: 35, cost: 800, note: "South exit, then walk." },
-    { id: "b22", dayId: 6, kind: "explore", title: "Byodo-in & tea street", place: "Uji", start: "10:30", duration: 180, cost: 2400, note: "Matcha before noon." },
-    { id: "b23", dayId: 6, kind: "reset", title: "Slow afternoon", place: "Uji riverside", start: "15:00", duration: 120, cost: 0, note: "Leave room for a nap." },
-    { id: "b24", dayId: 7, kind: "explore", title: "Last-minute Kyoto gifts", place: "Teramachi", start: "10:00", duration: 120, cost: 5000, note: "Don't buy the first thing." },
-    { id: "b25", dayId: 7, kind: "travel", title: "Haruka to KIX", place: "Kyoto → Kansai Airport", start: "13:00", duration: 75, cost: 2400, note: "Allow 2h before the flight." },
-  ];
+  const block = (id, dayId, kind, title, place, start, duration, cost, note) => ({
+    id, dayId, kind, title, place, start, duration, cost, note,
+  });
 
-  const conversations = [
+  const sessionSeeds = [
     {
       id: "day-five",
+      index: 1,
       title: "Make Day 5 lighter",
       date: "24 Oct · 21:18",
       source: "Managed Agent",
-      prompt: "Make Day 5 lighter. Keep the market and Dotonbori, but I don't want to arrive in Uji exhausted.",
-      reply: "Day 5 is doing three things in one day: Kuromon, Osaka Castle, and Dotonbori at night. Keep Kuromon and make the castle optional — the park is free and still worth the walk. Turn the evening into one standing counter instead of a full dinner. That buys you about two hours and protects the Uji morning.",
-      suggestion: { title: "One standing counter, no reservations", meta: "Day 05 · 19:00 · 60 min · ¥3,200" },
+      summary: "Day 5 shortened to three stops; Osaka ends before 21:00 and the Uji morning stays intact.",
+      rootTitle: "A slower week in Kansai",
+      rootKicker: "Draft 01 / Day 05",
+      dayOverrides: {},
+      blocks: [
+        block("s1-1", 1, "travel", "Haruka to Kyoto", "Kansai Airport → Kyoto Station", "09:40", 75, 2400, "Reserved seats, car 4"),
+        block("s1-2", 1, "stay", "Machiya check-in", "Gion, Kyoto", "11:30", 60, 96000, "Six nights · luggage drop first"),
+        block("s1-3", 1, "food", "Nishiki market crawl", "Nishiki Market", "13:30", 120, 5200, "Go hungry. Cash is useful."),
+        block("s1-4", 1, "explore", "Pontocho at dusk", "Pontocho Alley", "18:30", 90, 3500, "No reservations — walk until something feels right."),
+        block("s1-5", 2, "explore", "Fushimi Inari before crowds", "Fushimi Inari Taisha", "07:30", 180, 0, "Take the side path back down."),
+        block("s1-6", 2, "food", "Udon at Okakura", "Higashiyama", "11:30", 60, 2400, "Small shop, short menu."),
+        block("s1-7", 2, "explore", "Tea ceremony", "Higashiyama", "14:00", 90, 6000, "Booked under Chen · 2 guests"),
+        block("s1-8", 2, "food", "Kaiseki dinner", "Gion Karyo", "19:00", 120, 18000, "The splurge. Go slowly."),
+        block("s1-9", 3, "explore", "Bamboo grove, early", "Arashiyama", "09:00", 90, 0, "Before 09:30 it is still quiet."),
+        block("s1-10", 3, "food", "Riverside soba", "Katsura River", "11:30", 60, 2800, "Window seat if you can."),
+        block("s1-11", 3, "explore", "Monkey park + Okochi Sanso", "Arashiyama", "14:00", 150, 2200, "Wear shoes with grip."),
+        block("s1-12", 3, "reset", "Free evening", "Kyoto", "18:00", 120, 0, "Nothing scheduled. Protect this."),
+        block("s1-13", 4, "travel", "Kintetsu to Nara", "Kyoto → Nara", "08:30", 45, 1600, "Rapid express, 2 stops."),
+        block("s1-14", 4, "explore", "Nara deer park", "Nara Park", "10:00", 120, 0, "Buy crackers once, not three times."),
+        block("s1-15", 4, "food", "Todai-ji & lunch", "Nara", "12:30", 150, 3200, "Try the kakinoha sushi."),
+        block("s1-16", 4, "travel", "Back to Kyoto", "Nara → Kyoto", "17:30", 50, 1600, "Beat the commuter rush."),
+        block("s1-17", 5, "travel", "Limited express to Osaka", "Kyoto → Osaka", "09:30", 55, 2200, "Breakfast at the station."),
+        block("s1-18", 5, "food", "Kuromon market, grazing", "Nihonbashi, Osaka", "11:30", 90, 4800, "Split everything."),
+        block("s1-19", 5, "reset", "Standing counter, Dotonbori", "Dotonbori", "18:30", 75, 3200, "One counter, no reservations. Castle skipped."),
+        block("s1-20", 6, "travel", "Uji by local train", "Kyoto → Uji", "09:30", 35, 800, "South exit, then walk."),
+        block("s1-21", 6, "explore", "Byodo-in & tea street", "Uji", "10:30", 180, 2400, "Matcha before noon."),
+        block("s1-22", 6, "reset", "Slow afternoon", "Uji riverside", "15:00", 120, 0, "Leave room for a nap."),
+        block("s1-23", 7, "explore", "Last-minute Kyoto gifts", "Teramachi", "10:00", 120, 5000, "Don't buy the first thing."),
+        block("s1-24", 7, "travel", "Haruka to KIX", "Kyoto → Kansai Airport", "13:00", 75, 2400, "Allow 2h before the flight."),
+      ],
+      messages: [
+        {
+          role: "user",
+          text: "Make Day 5 lighter. Keep the market and Dotonbori, but I don't want to arrive in Uji exhausted.",
+          meta: "you · saved",
+        },
+        {
+          role: "agent",
+          text: "Day 5 is doing three things in one day: Kuromon, Osaka Castle, and Dotonbori at night. Keep Kuromon and make the castle optional — the park is free and still worth the walk. Turn the evening into one standing counter instead of a full dinner. That buys you about two hours and protects the Uji morning.",
+          meta: "grounded · managed agent",
+        },
+      ],
+      suggestion: {
+        label: "Applied to this draft",
+        title: "One standing counter, no reservations",
+        meta: "Day 05 · 18:30 · 75 min · ¥3,200",
+      },
+      usage: {
+        model: "Sonnet 4.5",
+        tokens: "14,290",
+        tokenDetail: "11.8k in · 2.5k out",
+        cost: "$0.18",
+        context: "18%",
+        contextDetail: "36k / 200k window",
+        runtime: "42s",
+      },
+      thinking: [
+        { state: "done", title: "Read the Day 5 chain and the Uji morning constraint", meta: "4s" },
+        { state: "done", title: "Compared three ways to lighten Osaka", meta: "11s" },
+        { state: "done", title: "Chose Kuromon plus one standing counter", meta: "19s" },
+        { state: "active", title: "Cleared the castle and full dinner from the draft", meta: "42s" },
+      ],
     },
     {
       id: "rain",
-      title: "A rain plan for Arashiyama",
+      index: 2,
+      title: "Rainy-day Arashiyama",
       date: "23 Oct · 09:42",
       source: "Managed Agent",
-      prompt: "It looks wet on Day 3. What moves first if the bamboo grove is a washout?",
-      reply: "Move the monkey park, not the bamboo grove. The grove is still atmospheric in light rain; the monkeys are the exposed part. Swap the 14:00 block for the Kyoto National Museum indoors, then take the earliest possible grove slot on Day 7 before the airport. Keep the free evening exactly where it is.",
-      suggestion: { title: "Indoor plan B: Kyoto National Museum", meta: "Day 03 · 14:00 · 90 min · ¥1,400" },
+      summary: "Day 3 rebuilt around a wet forecast; the museum moves indoors and the grove gets a Day 7 second chance.",
+      rootTitle: "A slower week in Kansai",
+      rootKicker: "Draft 02 / Rain plan",
+      dayOverrides: {
+        3: "Arashiyama",
+        7: "Goodbye",
+      },
+      blocks: [
+        block("s2-1", 1, "travel", "Haruka to Kyoto", "Kansai Airport → Kyoto Station", "09:40", 75, 2400, "Reserved seats, car 4"),
+        block("s2-2", 1, "stay", "Machiya check-in", "Gion, Kyoto", "11:30", 60, 96000, "Six nights · luggage drop first"),
+        block("s2-3", 1, "food", "Nishiki market crawl", "Nishiki Market", "13:30", 120, 5200, "Go hungry. Cash is useful."),
+        block("s2-4", 1, "explore", "Pontocho at dusk", "Pontocho Alley", "18:30", 90, 3500, "No reservations — walk until something feels right."),
+        block("s2-5", 2, "explore", "Fushimi Inari before crowds", "Fushimi Inari Taisha", "07:30", 180, 0, "Take the side path back down."),
+        block("s2-6", 2, "food", "Udon at Okakura", "Higashiyama", "11:30", 60, 2400, "Small shop, short menu."),
+        block("s2-7", 2, "explore", "Tea ceremony", "Higashiyama", "14:00", 90, 6000, "Booked under Chen · 2 guests"),
+        block("s2-8", 2, "food", "Kaiseki dinner", "Gion Karyo", "19:00", 120, 18000, "The splurge. Go slowly."),
+        block("s2-9", 3, "travel", "Local to Arashiyama", "Kyoto → Arashiyama", "08:45", 30, 240, "Rain shell, dry socks."),
+        block("s2-10", 3, "explore", "Bamboo grove, light rain", "Arashiyama", "09:30", 60, 0, "Go before the rain sets in; the path holds up."),
+        block("s2-11", 3, "food", "Riverside soba under cover", "Katsura River", "11:00", 60, 2800, "Ask for the covered terrace."),
+        block("s2-12", 3, "explore", "Kyoto National Museum", "Higashiyama", "13:30", 120, 1400, "Indoor plan B; cab from Arashiyama."),
+        block("s2-13", 3, "reset", "Hotel onsen + early night", "Gion", "17:30", 120, 0, "Keep the free evening exactly where it is."),
+        block("s2-14", 4, "travel", "Kintetsu to Nara", "Kyoto → Nara", "08:30", 45, 1600, "Rapid express, 2 stops."),
+        block("s2-15", 4, "explore", "Nara deer park", "Nara Park", "10:00", 120, 0, "Buy crackers once, not three times."),
+        block("s2-16", 4, "food", "Todai-ji & lunch", "Nara", "12:30", 150, 3200, "Try the kakinoha sushi."),
+        block("s2-17", 4, "travel", "Back to Kyoto", "Nara → Kyoto", "17:30", 50, 1600, "Beat the commuter rush."),
+        block("s2-18", 5, "travel", "Limited express to Osaka", "Kyoto → Osaka", "09:30", 55, 2200, "Breakfast at the station."),
+        block("s2-19", 5, "food", "Kuromon market", "Nihonbashi, Osaka", "11:30", 90, 4800, "Split everything."),
+        block("s2-20", 5, "explore", "Osaka Castle", "Osaka Castle Park", "14:00", 120, 1200, "The park is free; the keep is optional."),
+        block("s2-21", 5, "food", "Dotonbori after dark", "Dotonbori", "18:30", 150, 7600, "Late train back is fine."),
+        block("s2-22", 6, "travel", "Uji by local train", "Kyoto → Uji", "09:30", 35, 800, "South exit, then walk."),
+        block("s2-23", 6, "explore", "Byodo-in & tea street", "Uji", "10:30", 180, 2400, "Matcha before noon."),
+        block("s2-24", 6, "reset", "Slow afternoon", "Uji riverside", "15:00", 120, 0, "Leave room for a nap."),
+        block("s2-25", 7, "explore", "Last bamboo slot", "Arashiyama", "07:30", 45, 0, "The dry second chance, before the airport."),
+        block("s2-26", 7, "explore", "Last-minute Kyoto gifts", "Teramachi", "10:00", 120, 5000, "Don't buy the first thing."),
+        block("s2-27", 7, "travel", "Haruka to KIX", "Kyoto → Kansai Airport", "13:00", 75, 2400, "Allow 2h before the flight."),
+      ],
+      messages: [
+        {
+          role: "user",
+          text: "It looks wet on Day 3. What moves first if the bamboo grove is a washout?",
+          meta: "you · saved",
+        },
+        {
+          role: "agent",
+          text: "Move the monkey park, not the bamboo grove. The grove is still atmospheric in light rain; the monkeys are the exposed part. Swap the 14:00 block for the Kyoto National Museum indoors, then take the earliest possible grove slot on Day 7 before the airport. Keep the free evening exactly where it is.",
+          meta: "grounded · managed agent",
+        },
+      ],
+      suggestion: {
+        label: "Applied to this draft",
+        title: "Indoor plan B: Kyoto National Museum",
+        meta: "Day 03 · 13:30 · 120 min · ¥1,400",
+      },
+      usage: {
+        model: "Sonnet 4.5",
+        tokens: "9,640",
+        tokenDetail: "8.1k in · 1.5k out",
+        cost: "$0.12",
+        context: "12%",
+        contextDetail: "24k / 200k window",
+        runtime: "31s",
+      },
+      thinking: [
+        { state: "done", title: "Checked the rain window for Day 3", meta: "3s" },
+        { state: "done", title: "Ranked exposed versus covered blocks", meta: "9s" },
+        { state: "done", title: "Moved the museum to 13:30 indoors", meta: "17s" },
+        { state: "active", title: "Kept the free evening untouched", meta: "31s" },
+      ],
     },
     {
       id: "budget",
-      title: "Cut ¥30,000 without losing tea",
+      index: 3,
+      title: "Cut ¥30k without losing tea",
       date: "22 Oct · 18:05",
       source: "Local draft",
-      prompt: "Trim about ¥30,000 from the week. Do not touch the tea ceremony or the Nishiki morning.",
-      reply: "The kaiseki on Day 2 is the cleanest cut: a long lunch at a neighbourhood counter keeps the day's shape and saves roughly ¥13,000. Taking the local train to Uji instead of the express saves little, so leave it. The other lever is the Osaka hotel night — one night in a simpler room saves the rest without changing the route.",
-      suggestion: { title: "Long lunch instead of kaiseki", meta: "Day 02 · 13:00 · 90 min · ¥4,800" },
+      summary: "A cheaper food, stay, and rail pass through the same week — tea ceremony and Nishiki untouched.",
+      rootTitle: "A slower week in Kansai",
+      rootKicker: "Draft 03 / ¥30k",
+      dayOverrides: {},
+      blocks: [
+        block("s3-1", 1, "travel", "Haruka to Kyoto", "Kansai Airport → Kyoto Station", "09:40", 75, 2400, "Reserved seats, car 4"),
+        block("s3-2", 1, "stay", "Machiya, simpler room", "Gion, Kyoto", "11:30", 60, 84000, "Same six nights, smaller room; saves ¥12,000."),
+        block("s3-3", 1, "food", "Nishiki market crawl", "Nishiki Market", "13:30", 120, 5200, "Protected. Go hungry. Cash is useful."),
+        block("s3-4", 1, "explore", "Pontocho at dusk", "Pontocho Alley", "18:30", 90, 3500, "No reservations — walk until something feels right."),
+        block("s3-5", 2, "explore", "Fushimi Inari before crowds", "Fushimi Inari Taisha", "07:30", 180, 0, "Take the side path back down."),
+        block("s3-6", 2, "food", "Long lunch at a counter", "Higashiyama", "12:00", 90, 8000, "Replaces the udon stop and the kaiseki."),
+        block("s3-7", 2, "explore", "Tea ceremony", "Higashiyama", "14:30", 90, 6000, "Protected. Booked under Chen · 2 guests."),
+        block("s3-8", 2, "reset", "Free evening, no reservation", "Kyoto", "18:30", 90, 0, "No second dinner to pay for."),
+        block("s3-9", 3, "explore", "Bamboo grove, early", "Arashiyama", "09:00", 90, 0, "Before 09:30 it is still quiet."),
+        block("s3-10", 3, "food", "Riverside soba", "Katsura River", "11:30", 60, 2800, "Window seat if you can."),
+        block("s3-11", 3, "explore", "Monkey park + Okochi Sanso", "Arashiyama", "14:00", 150, 2200, "Wear shoes with grip."),
+        block("s3-12", 3, "reset", "Free evening", "Kyoto", "18:00", 120, 0, "Nothing scheduled. Protect this."),
+        block("s3-13", 4, "travel", "Kintetsu local to Nara", "Kyoto → Nara", "08:30", 70, 800, "Slower, half the fare."),
+        block("s3-14", 4, "explore", "Nara deer park", "Nara Park", "10:00", 120, 0, "Buy crackers once, not three times."),
+        block("s3-15", 4, "food", "Todai-ji & lunch", "Nara", "12:30", 150, 3200, "Try the kakinoha sushi."),
+        block("s3-16", 4, "travel", "Local back to Kyoto", "Nara → Kyoto", "17:30", 70, 800, "Beat the commuter rush."),
+        block("s3-17", 5, "travel", "Limited express to Osaka", "Kyoto → Osaka", "09:30", 55, 2200, "Breakfast at the station."),
+        block("s3-18", 5, "food", "Kuromon market", "Nihonbashi, Osaka", "11:30", 90, 4800, "Split everything."),
+        block("s3-19", 5, "explore", "Osaka Castle Park, free", "Osaka Castle Park", "14:00", 90, 0, "The park only; skip the keep."),
+        block("s3-20", 5, "food", "Standing sushi, Dotonbori", "Dotonbori", "18:30", 75, 1600, "One counter, a few plates, no full dinner."),
+        block("s3-21", 6, "travel", "Uji by local train", "Kyoto → Uji", "09:30", 45, 400, "A slower ride, still early."),
+        block("s3-22", 6, "explore", "Byodo-in & tea street", "Uji", "10:30", 180, 2400, "Matcha before noon."),
+        block("s3-23", 6, "reset", "Slow afternoon", "Uji riverside", "15:00", 120, 0, "Leave room for a nap."),
+        block("s3-24", 7, "explore", "Last-minute Kyoto gifts", "Teramachi", "10:00", 120, 3000, "Set a cap; don't buy the first thing."),
+        block("s3-25", 7, "travel", "Haruka to KIX", "Kyoto → Kansai Airport", "13:00", 75, 2400, "Allow 2h before the flight."),
+      ],
+      messages: [
+        {
+          role: "user",
+          text: "Trim about ¥30,000 from the week. Do not touch the tea ceremony or the Nishiki morning.",
+          meta: "you · saved",
+        },
+        {
+          role: "agent",
+          text: "The kaiseki is the cleanest cut: the ¥18,000 dinner and the udon stop become one ¥8,000 counter lunch, and the day keeps its shape. A simpler room in the same machiya saves ¥12,000. Local trains to Nara and Uji plus a standing sushi counter close the gap. Tea and Nishiki are untouched. That is ¥30,000 exactly.",
+          meta: "no model · local draft",
+        },
+      ],
+      suggestion: {
+        label: "Applied to this draft",
+        title: "Long lunch instead of kaiseki",
+        meta: "Day 02 · 12:00 · 90 min · ¥8,000",
+      },
+      usage: {
+        model: "Haiku 4.5",
+        tokens: "21,080",
+        tokenDetail: "18.4k in · 2.7k out",
+        cost: "$0.09",
+        context: "26%",
+        contextDetail: "52k / 200k window",
+        runtime: "58s",
+      },
+      thinking: [
+        { state: "done", title: "Priced every block against ¥260,000", meta: "5s" },
+        { state: "done", title: "Protected the tea ceremony and Nishiki", meta: "13s" },
+        { state: "done", title: "Found ¥30,000 across food, stay, and rail", meta: "27s" },
+        { state: "active", title: "Held the local trains; no express upgrade", meta: "58s" },
+      ],
     },
   ];
 
@@ -105,6 +275,7 @@
   const editorBackdrop = $("#editorBackdrop");
   const blockForm = $("#blockForm");
 
+  let store = null;
   let state = null;
   let stageW = STAGE_MIN_W;
   let stageH = STAGE_MIN_H;
@@ -113,7 +284,6 @@
   let panY = 0;
   let selectedId = null;
   let editingId = null;
-  let activeConversation = 0;
   let toastTimer = 0;
   let hasFitted = false;
 
@@ -135,93 +305,116 @@
     }[char]));
   }
 
-  function parseTrip() {
-    const days = seedDays.map((day, index) => ({
+  function sessionById(id) {
+    return sessionSeeds.find((item) => item.id === id) || sessionSeeds[0];
+  }
+
+  function layoutSession(seed) {
+    const days = BASE_DAYS.map((day, index) => ({
       ...day,
-      x: DAY_X,
-      y: DAY_Y + index * DAY_ROW,
+      title: seed.dayOverrides[day.id] || day.title,
+      x: DAY_X + index * DAY_PITCH,
+      y: DAY_Y,
       w: SIZES.day.w,
       h: SIZES.day.h,
     }));
     const perDay = new Map();
-    const blocks = seedBlocks.map((block) => {
-      const index = perDay.get(block.dayId) || 0;
-      perDay.set(block.dayId, index + 1);
-      const day = days[block.dayId - 1];
+    const blocks = seed.blocks.map((item) => {
+      const order = perDay.get(item.dayId) || 0;
+      perDay.set(item.dayId, order + 1);
       return {
-        ...block,
-        x: BLOCK_X + index * BLOCK_PITCH,
-        y: day.y,
+        ...item,
+        x: DAY_X + (item.dayId - 1) * DAY_PITCH,
+        y: BLOCK_Y0 + order * BLOCK_PITCH,
         w: SIZES.block.w,
         h: SIZES.block.h,
       };
     });
     return {
+      root: { ...ROOT, w: SIZES.root.w, h: SIZES.root.h },
       days,
       blocks,
-      root: { ...ROOT, w: SIZES.root.w, h: SIZES.root.h },
     };
   }
 
-  function seedState() {
-    const trip = parseTrip();
-    return { version: 1, days: trip.days, blocks: trip.blocks, root: trip.root };
+  function seedStore() {
+    const trees = {};
+    for (const seed of sessionSeeds) trees[seed.id] = layoutSession(seed);
+    return { version: 1, activeId: sessionSeeds[0].id, trees };
   }
 
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORE_KEY);
-      if (!raw) return seedState();
-      const parsed = JSON.parse(raw);
-      if (!parsed || !Array.isArray(parsed.days) || !Array.isArray(parsed.blocks)) return seedState();
-      if (parsed.days.length !== 7) return seedState();
-      // Keep the itinerary honest even if a previous demo stored a partial graph.
-      const days = parsed.days.map((day) => {
-        const seed = seedDays.find((item) => item.id === day.id) || seedDays[0];
+  function cleanTree(raw, seed) {
+    if (!raw || !Array.isArray(raw.days) || !Array.isArray(raw.blocks)) return null;
+    if (raw.days.length !== BASE_DAYS.length) return null;
+    const days = BASE_DAYS.map((base, index) => {
+      const saved = raw.days.find((day) => Number(day.id) === base.id) || raw.days[index] || {};
+      return {
+        ...base,
+        title: seed.dayOverrides[base.id] || base.title,
+        x: Number.isFinite(saved.x) ? saved.x : DAY_X + index * DAY_PITCH,
+        y: Number.isFinite(saved.y) ? saved.y : DAY_Y,
+        w: SIZES.day.w,
+        h: SIZES.day.h,
+      };
+    });
+    const blocks = raw.blocks
+      .filter((item) => item && item.id && item.dayId)
+      .map((item, index) => {
+        const day = days.find((entry) => entry.id === Number(item.dayId)) || days[0];
+        const fallbackOrder = index;
         return {
-          ...seed,
-          x: Number.isFinite(day.x) ? day.x : DAY_X,
-          y: Number.isFinite(day.y) ? day.y : DAY_Y + (seed.id - 1) * DAY_ROW,
-          w: SIZES.day.w,
-          h: SIZES.day.h,
+          id: String(item.id),
+          dayId: day.id,
+          kind: KIND[item.kind] ? item.kind : "explore",
+          title: String(item.title || "Untitled block").slice(0, 80),
+          place: String(item.place || "").slice(0, 100),
+          start: /^\d{2}:\d{2}$/.test(item.start) ? item.start : "10:00",
+          duration: clamp(Number(item.duration) || 60, 15, 600),
+          cost: Math.max(0, Number(item.cost) || 0),
+          note: String(item.note || "").slice(0, 240),
+          x: Number.isFinite(item.x) ? item.x : day.x,
+          y: Number.isFinite(item.y) ? item.y : BLOCK_Y0 + fallbackOrder * BLOCK_PITCH,
+          w: SIZES.block.w,
+          h: SIZES.block.h,
         };
       });
-      const perDay = new Map();
-      const blocks = parsed.blocks
-        .filter((block) => block && block.id && block.dayId)
-        .map((block) => {
-          const day = days.find((item) => item.id === Number(block.dayId)) || days[0];
-          const order = perDay.get(day.id) || 0;
-          perDay.set(day.id, order + 1);
-          const fallback = BLOCK_X + order * BLOCK_PITCH;
-          return {
-            id: String(block.id),
-            dayId: Number(block.dayId),
-            kind: KIND[block.kind] ? block.kind : "explore",
-            title: String(block.title || "Untitled block").slice(0, 80),
-            place: String(block.place || "").slice(0, 100),
-            start: /^\d{2}:\d{2}$/.test(block.start) ? block.start : "10:00",
-            duration: clamp(Number(block.duration) || 60, 15, 600),
-            cost: Math.max(0, Number(block.cost) || 0),
-            note: String(block.note || "").slice(0, 240),
-            x: Number.isFinite(block.x) ? block.x : fallback,
-            y: Number.isFinite(block.y) ? block.y : day.y,
-            w: SIZES.block.w,
-            h: SIZES.block.h,
-          };
-        });
-      return { version: 1, days, blocks, root: { ...ROOT, w: SIZES.root.w, h: SIZES.root.h } };
+    return {
+      root: { ...ROOT, w: SIZES.root.w, h: SIZES.root.h },
+      days,
+      blocks,
+    };
+  }
+
+  function loadStore() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return seedStore();
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.version !== 1 || !parsed.trees) return seedStore();
+      const trees = {};
+      for (const seed of sessionSeeds) {
+        trees[seed.id] = cleanTree(parsed.trees[seed.id], seed) || layoutSession(seed);
+      }
+      return {
+        version: 1,
+        activeId: sessionSeeds.some((seed) => seed.id === parsed.activeId) ? parsed.activeId : sessionSeeds[0].id,
+        trees,
+      };
     } catch {
-      return seedState();
+      return seedStore();
     }
   }
 
-  function saveState() {
+  function saveStore() {
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+      localStorage.setItem(STORE_KEY, JSON.stringify(store));
     } catch {
-      // The graph still works for this session when storage is unavailable.
+      // The session still works when storage is unavailable.
     }
+  }
+
+  function activeSeed() {
+    return sessionById(store.activeId);
   }
 
   function showToast(message) {
@@ -286,12 +479,22 @@
     return `translate3d(${node.x}px, ${node.y}px, 0)`;
   }
 
+  function blocksOnDay(dayId) {
+    return state.blocks
+      .filter((item) => item.dayId === dayId)
+      .sort((a, b) => (a.y - b.y) || a.start.localeCompare(b.start));
+  }
+
   function dayCost(dayId) {
-    return state.blocks.filter((block) => block.dayId === dayId).reduce((sum, block) => sum + Number(block.cost || 0), 0);
+    return state.blocks.filter((item) => item.dayId === dayId).reduce((sum, item) => sum + Number(item.cost || 0), 0);
   }
 
   function dayCount(dayId) {
-    return state.blocks.filter((block) => block.dayId === dayId).length;
+    return state.blocks.filter((item) => item.dayId === dayId).length;
+  }
+
+  function totalSpent() {
+    return state.blocks.reduce((sum, item) => sum + Number(item.cost || 0), 0);
   }
 
   function createEdge(d, extraClass = "", withArrow = false) {
@@ -309,7 +512,7 @@
     const forward = to.x >= from.x;
     const startX = forward ? fromRight : from.x;
     const endX = forward ? to.x : to.x + to.w;
-    const bend = clamp(Math.abs(endX - startX) * 0.48, 16, 96);
+    const bend = clamp(Math.abs(endX - startX) * 0.5, 14, 64);
     const c1 = forward ? startX + bend : startX - bend;
     const c2 = forward ? endX - bend : endX + bend;
     return `M ${startX} ${fromCenterY} C ${c1} ${fromCenterY}, ${c2} ${toCenterY}, ${endX} ${toCenterY}`;
@@ -320,12 +523,8 @@
     const y1 = from.y + from.h;
     const x2 = to.x + to.w / 2;
     const y2 = to.y;
-    const bend = clamp((y2 - y1) / 2, 14, 42);
+    const bend = clamp((y2 - y1) / 2, 12, 34);
     return `M ${x1} ${y1} C ${x1} ${y1 + bend}, ${x2} ${y2 - bend}, ${x2} ${y2}`;
-  }
-
-  function blocksOnDay(dayId) {
-    return state.blocks.filter((block) => block.dayId === dayId).sort((a, b) => a.x - b.x);
   }
 
   function renderEdges() {
@@ -333,17 +532,16 @@
 
     const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
     defs.innerHTML =
-      '<marker id="edgeArrow" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="6.4" markerHeight="6.4" orient="auto" markerUnits="strokeWidth"><path d="M1.5 1.6 L8.4 5 L1.5 8.4" fill="none" stroke="#a34a2a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>';
+      '<marker id="edgeArrow" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="6.4" markerHeight="6.4" orient="auto" markerUnits="strokeWidth"><path d="M1.5 1.6 L8.4 5 L1.5 8.4" fill="none" stroke="#d97757" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>';
     edgesSvg.appendChild(defs);
 
-    const selected = state.blocks.find((block) => block.id === selectedId);
+    const selected = state.blocks.find((item) => item.id === selectedId);
     const days = [...state.days].sort((a, b) => a.id - b.id);
 
     days.forEach((day, index) => {
       const dayActive = Boolean(selected && selected.dayId === day.id);
-      const fromPrevious = index > 0;
       createEdge(
-        fromPrevious ? edgeDown(days[index - 1], day) : edgeBetween(state.root, day),
+        index > 0 ? edgeBetween(days[index - 1], day) : edgeDown(state.root, day),
         dayActive ? "edge--chain edge--active" : "edge--chain",
         true,
       );
@@ -351,28 +549,28 @@
       const blocks = blocksOnDay(day.id);
       if (!blocks.length) return;
 
-      createEdge(edgeBetween(day, blocks[0]), dayActive ? "edge--day edge--active" : "edge--day", true);
+      createEdge(edgeDown(day, blocks[0]), dayActive ? "edge--day edge--active" : "edge--day", true);
 
-      blocks.forEach((block, position) => {
+      blocks.forEach((item, position) => {
         const next = blocks[position + 1];
         if (!next) return;
         createEdge(
-          edgeBetween(block, next),
-          block.id === selectedId ? "edge--seq edge--active" : "edge--seq",
+          edgeDown(item, next),
+          item.id === selectedId ? "edge--seq edge--active" : "edge--seq",
           true,
         );
       });
     });
   }
 
-  function nodeShell(className, node, label) {
+  function nodeShell(className, node, id) {
     const element = document.createElement("div");
     element.className = `node ${className}`;
     element.style.transform = nodePosition(node);
     element.style.width = `${node.w}px`;
     element.style.height = `${node.h}px`;
-    element.dataset.id = label;
-    if (label === selectedId) element.classList.add("is-selected");
+    element.dataset.id = id;
+    if (id === selectedId) element.classList.add("is-selected");
     return element;
   }
 
@@ -392,7 +590,7 @@
       };
       element.setPointerCapture(event.pointerId);
       element.classList.add("is-dragging");
-      selectedId = node.id === "root" ? selectedId : node.id;
+      if (node.id !== "root") selectedId = node.id;
     });
     element.addEventListener("pointermove", (event) => {
       if (!drag || event.pointerId !== drag.pointerId) return;
@@ -416,7 +614,8 @@
         onOpen();
       } else {
         updateStageSize();
-        saveState();
+        saveStore();
+        renderEdges();
       }
     };
     element.addEventListener("pointerup", end);
@@ -431,6 +630,8 @@
 
   function renderNodes() {
     stage.querySelectorAll(".node").forEach((node) => node.remove());
+    const seed = activeSeed();
+    const spent = totalSpent();
 
     const root = document.createElement("div");
     root.className = "node node--root";
@@ -438,10 +639,11 @@
     root.style.width = `${state.root.w}px`;
     root.style.height = `${state.root.h}px`;
     root.innerHTML = `
-      <span class="root-kicker">Root / trip</span>
-      <div class="root-title">A slower week<br>in Kansai</div>
-      <div class="root-meta"><span>7 days</span><span>${state.blocks.length} blocks</span><span>${formatYen(BUDGET)}</span></div>
+      <span class="root-kicker">${esc(seed.rootKicker)}</span>
+      <div class="root-title">${esc(seed.rootTitle)}</div>
+      <div class="root-meta"><span>7 days</span><span>${state.blocks.length} blocks</span></div>
     `;
+    root.title = `${seed.rootTitle} · ${formatYen(spent)} planned`;
     stage.appendChild(root);
 
     for (const day of state.days) {
@@ -451,10 +653,11 @@
       element.setAttribute("aria-label", `Day ${day.id}, ${day.title}. ${dayCount(day.id)} blocks. Press Enter to add a block.`);
       element.innerHTML = `
         <button type="button" class="day-add" aria-label="Add a block to Day ${day.id}">+</button>
-        <div class="day-top"><span>Day 0${day.id} / ${day.label} ${day.date}</span><span>${day.city}</span></div>
-        <div class="day-title">${day.title}</div>
-        <div class="day-meta"><span>${dayCount(day.id)} blocks</span><span>${formatYen(dayCost(day.id))}</span></div>
+        <div class="day-top"><span>D${day.id} · ${day.label} ${day.date}</span></div>
+        <div class="day-title">${esc(day.title)}</div>
+        <div class="day-meta"><span>${dayCount(day.id)}</span><span>${formatYen(dayCost(day.id))}</span></div>
       `;
+      element.title = `Day ${String(day.id).padStart(2, "0")} · ${day.label} ${day.date} · ${day.city} · ${day.title}`;
       const add = $(".day-add", element);
       add.addEventListener("pointerdown", (event) => event.stopPropagation());
       add.addEventListener("click", (event) => {
@@ -466,42 +669,231 @@
     }
 
     const ordered = [...state.blocks].sort((a, b) => a.dayId - b.dayId || a.start.localeCompare(b.start));
-    for (const block of ordered) {
-      const element = nodeShell("node--block", block, block.id);
-      element.dataset.kind = block.kind;
+    for (const item of ordered) {
+      const element = nodeShell("node--block", item, item.id);
+      element.dataset.kind = item.kind;
       element.tabIndex = 0;
       element.setAttribute("role", "button");
-      element.setAttribute("aria-label", `${block.title}, Day ${block.dayId}, ${block.start}, ${formatYen(block.cost)}. Press Enter to edit.`);
-      const kind = KIND[block.kind] || KIND.explore;
+      element.setAttribute("aria-label", `${item.title}, Day ${item.dayId}, ${item.start}, ${formatYen(item.cost)}. Press Enter to edit.`);
+      const kind = KIND[item.kind] || KIND.explore;
       element.innerHTML = `
-        <div class="block-top"><span class="block-kind">${kind.label}</span><span>${block.start}</span></div>
-        <div class="block-title">${block.title}</div>
-        <div class="block-foot"><span>${block.place || "Place TBD"}</span><span>${formatYen(block.cost)}</span></div>
+        <div class="block-top"><span class="block-kind">${kind.label}</span><span>${item.start}</span></div>
+        <div class="block-title">${esc(item.title)}</div>
+        <div class="block-foot"><span>${item.duration}m</span><span>${formatYen(item.cost)}</span></div>
       `;
-      element.title = `${block.title}\n${block.start} · ${block.duration} min\n${block.place}${block.note ? `\n${block.note}` : ""}`;
-      bindNode(element, block, () => openEditor(block.id));
+      element.title = `${item.title}\n${item.start} · ${item.duration} min\n${item.place}${item.note ? `\n${item.note}` : ""}`;
+      bindNode(element, item, () => openEditor(item.id));
       stage.appendChild(element);
     }
 
     renderEdges();
   }
 
-  function updateRail() {
-    const spent = state.blocks.reduce((sum, block) => sum + Number(block.cost || 0), 0);
-    const share = clamp((spent / BUDGET) * 100, 0, 100);
+  function renderChrome() {
+    const seed = activeSeed();
+    const spent = totalSpent();
+    const share = clamp((spent / TRIP.budget) * 100, 0, 100);
+    const blockCount = state.blocks.length;
+
+    $("#tripEyebrow").textContent = `Saved draft 0${seed.index} / local data`;
+    $("#trip-title").textContent = seed.title;
+    $("#tripSub").textContent = seed.summary;
+    $("#conversations-title").textContent = seed.title;
+    $("#railTitle").textContent = TRIP.name;
+    $("#railSession").textContent = `Draft 0${seed.index} · ${seed.title}`;
     $("#railDays").textContent = String(state.days.length);
-    $("#railBlocks").textContent = String(state.blocks.length);
+    $("#railBlocks").textContent = String(blockCount);
     $("#railSpend").textContent = formatYen(spent);
     $("#railMeter").style.width = `${share.toFixed(1)}%`;
-    $("#railBudget").textContent = `of ${formatYen(BUDGET)} planned budget · ${Math.round(share)}%`;
-    $(".rail-meter").setAttribute("aria-label", `${formatYen(spent)} planned of ${formatYen(BUDGET)}`);
+    $("#railBudget").textContent = `of ${formatYen(TRIP.budget)} planned budget · ${Math.round(share)}%`;
+    $(".rail-meter").setAttribute("aria-label", `${formatYen(spent)} planned of ${formatYen(TRIP.budget)}`);
+    $("#stageNoteOne").textContent = `ROOT → DAY 01 / DRAFT 0${seed.index}`;
+    $("#stageNoteTwo").textContent = "DAY 01 → DAY 07";
+    $("#stageNoteThree").textContent = `LOCAL / ${blockCount} BLOCKS`;
+    document.title = `${seed.title} — TripBlocks demo`;
   }
 
-  function render() {
+  function renderSessions() {
+    const list = $("#sessionList");
+    list.replaceChildren();
+    for (const seed of sessionSeeds) {
+      const tree = store.trees[seed.id];
+      const button = document.createElement("button");
+      button.type = "button";
+      const active = seed.id === store.activeId;
+      button.className = `session-item${active ? " is-active" : ""}`;
+      button.setAttribute("role", "tab");
+      button.setAttribute("aria-selected", String(active));
+      button.setAttribute("aria-controls", "graphPanel conversationsPanel");
+      button.dataset.sessionId = seed.id;
+      const tag = seed.id === "rain" ? "rain plan" : seed.id === "budget" ? "¥30k cut" : "Day 5 shorter";
+      button.innerHTML = `
+        <span class="session-num">${String(seed.index).padStart(2, "0")}</span>
+        <span class="session-copy">
+          <span class="session-top"><span>${esc(seed.source)}</span><span>${esc(seed.date.split(" · ")[0])}</span></span>
+          <strong>${esc(seed.title)}</strong>
+          <span class="session-foot">${tree ? tree.blocks.length : 0} blocks · ${tag}</span>
+        </span>
+      `;
+      button.addEventListener("click", () => selectSession(seed.id));
+      list.appendChild(button);
+    }
+  }
+
+  function messageElement(role, text, meta) {
+    const wrap = document.createElement("div");
+    wrap.className = `message message--${role}`;
+    const label = document.createElement("div");
+    label.className = "message-label";
+    const left = document.createElement("span");
+    left.textContent = role === "user" ? "Traveller" : "Wander / managed agent";
+    const right = document.createElement("span");
+    right.textContent = meta || "";
+    label.append(left, right);
+    const body = document.createElement("div");
+    body.className = "message-body";
+    body.textContent = text;
+    wrap.append(label, body);
+    return wrap;
+  }
+
+  function updateTranscriptFade() {
+    const transcript = $("#convTranscript");
+    if (!transcript) return;
+    const scrollable = transcript.scrollHeight - transcript.clientHeight > 4;
+    const notAtBottom = transcript.scrollTop + transcript.clientHeight < transcript.scrollHeight - 4;
+    transcript.classList.toggle("has-fade", scrollable && notAtBottom);
+  }
+
+  function renderTranscript() {
+    const seed = activeSeed();
+    const root = $("#convTranscript");
+    root.replaceChildren();
+    root.scrollTop = 0;
+
+    const head = document.createElement("div");
+    head.className = "transcript-head";
+    head.innerHTML = `
+      <div><span>Saved ${esc(seed.date)}</span></div>
+      <span class="source-tag">${esc(seed.source)}</span>
+    `;
+    root.appendChild(head);
+
+    seed.messages.forEach((message) => {
+      const element = messageElement(message.role, message.text, message.meta);
+      if (message.role === "agent" && seed.suggestion) {
+        const card = document.createElement("div");
+        card.className = "suggestion";
+        card.innerHTML = `
+          <span class="suggestion-label">${esc(seed.suggestion.label)}</span>
+          <strong>${esc(seed.suggestion.title)}</strong>
+          <span>${esc(seed.suggestion.meta)}</span>
+        `;
+        element.appendChild(card);
+      }
+      root.appendChild(element);
+    });
+
+    const note = document.createElement("p");
+    note.className = "readonly-line";
+    note.textContent = `Saved ${seed.source.toLowerCase()} record · no composer · calls no model.`;
+    root.appendChild(note);
+  }
+
+  function renderUsage() {
+    const seed = activeSeed();
+    const grid = $("#usageGrid");
+    grid.replaceChildren();
+    const contextValue = parseInt(seed.usage.context, 10) || 0;
+    const cells = [
+      { label: "Model", value: seed.usage.model, detail: "", wide: true },
+      { label: "Tokens", value: seed.usage.tokens, detail: seed.usage.tokenDetail },
+      { label: "Cost", value: seed.usage.cost, detail: "" },
+      { label: "Context", value: seed.usage.context, detail: seed.usage.contextDetail, bar: contextValue },
+      { label: "Runtime", value: seed.usage.runtime, detail: "" },
+    ];
+    for (const cell of cells) {
+      const wrap = document.createElement("div");
+      wrap.className = `usage-cell${cell.wide ? " usage-cell--wide" : ""}`;
+      wrap.innerHTML = `
+        <dt>${esc(cell.label)}</dt>
+        <dd>${esc(cell.value)}</dd>
+        ${cell.detail ? `<span>${esc(cell.detail)}</span>` : ""}
+        ${cell.bar === undefined ? "" : `<span class="usage-bar" role="img" aria-label="Context used: ${cell.bar}%"><i style="width:${clamp(cell.bar, 0, 100)}%"></i></span>`}
+      `;
+      grid.appendChild(wrap);
+    }
+  }
+
+  function renderThinking() {
+    const list = $("#thinkingList");
+    list.replaceChildren();
+    const seed = activeSeed();
+    const last = seed.thinking[seed.thinking.length - 1];
+    $("#thinkingSummary").textContent = `${seed.thinking.length} steps · ${last.meta}`;
+    seed.thinking.forEach((step, index) => {
+      const item = document.createElement("li");
+      item.className = `thinking-step thinking-step--${step.state}`;
+      if (step.state === "active") item.setAttribute("aria-current", "step");
+      item.innerHTML = `
+        <span class="thinking-mark" aria-hidden="true">${step.state === "done" ? "✓" : "<i></i>"}</span>
+        <span class="thinking-copy">
+          <strong>${esc(step.title)}</strong>
+          <span class="thinking-meta">${step.state === "done" ? "done" : "active"} · step ${index + 1} · ${esc(step.meta)}</span>
+        </span>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  let thinkingOpen = true;
+  function applyThinkingOpen() {
+    const card = $("#thinkingCard");
+    card.classList.toggle("is-open", thinkingOpen);
+    $("#thinkingToggle").setAttribute("aria-expanded", String(thinkingOpen));
+    window.requestAnimationFrame(updateTranscriptFade);
+  }
+  $("#thinkingToggle").addEventListener("click", () => {
+    thinkingOpen = !thinkingOpen;
+    applyThinkingOpen();
+  });
+
+  function setMobileView(view) {
+    document.body.classList.toggle("mobile-view-chat", view === "chat");
+    $$(".mobile-tab").forEach((button) => {
+      const active = button.dataset.mobileView === view;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    window.requestAnimationFrame(updateTranscriptFade);
+  }
+  $$(".mobile-tab").forEach((button) => {
+    button.addEventListener("click", () => setMobileView(button.dataset.mobileView));
+  });
+  $("#convTranscript").addEventListener("scroll", updateTranscriptFade, { passive: true });
+
+  function renderAll() {
+    renderSessions();
     renderNodes();
-    updateRail();
+    renderChrome();
+    renderTranscript();
+    renderUsage();
+    renderThinking();
     updateStageSize();
-    if (!hasFitted) requestAnimationFrame(fitGraph);
+    window.requestAnimationFrame(updateTranscriptFade);
+  }
+
+  function selectSession(id) {
+    if (!store.trees[id] || store.activeId === id) return;
+    closeEditor();
+    store.activeId = id;
+    state = store.trees[id];
+    selectedId = null;
+    hasFitted = false;
+    renderAll();
+    saveStore();
+    requestAnimationFrame(fitGraph);
+    showToast(`Switched to “${activeSeed().title}” · each draft keeps its own tree`);
   }
 
   function renderDayOptions(selectedDay) {
@@ -518,19 +910,19 @@
 
   function openEditor(blockId, presetDay = 1) {
     editingId = blockId;
-    const block = blockId ? state.blocks.find((item) => item.id === blockId) : null;
-    const dayId = block ? block.dayId : presetDay;
+    const item = blockId ? state.blocks.find((entry) => entry.id === blockId) : null;
+    const dayId = item ? item.dayId : presetDay;
     renderDayOptions(dayId);
-    $("#editorEyebrow").textContent = block ? "Edit block / local demo" : "New block / local demo";
-    $("#editorTitle").textContent = block ? block.title : "Add a block";
-    $("#fieldTitle").value = block ? block.title : "";
-    $("#fieldKind").value = block ? block.kind : "explore";
-    $("#fieldStart").value = block ? block.start : "10:00";
-    $("#fieldDuration").value = block ? block.duration : 60;
-    $("#fieldCost").value = block ? block.cost : 0;
-    $("#fieldPlace").value = block ? block.place : "";
-    $("#fieldNote").value = block ? block.note : "";
-    $("#deleteBlock").hidden = !block;
+    $("#editorEyebrow").textContent = item ? "Edit block / this conversation" : "New block / this conversation";
+    $("#editorTitle").textContent = item ? item.title : "Add a block";
+    $("#fieldTitle").value = item ? item.title : "";
+    $("#fieldKind").value = item ? item.kind : "explore";
+    $("#fieldStart").value = item ? item.start : "10:00";
+    $("#fieldDuration").value = item ? item.duration : 60;
+    $("#fieldCost").value = item ? item.cost : 0;
+    $("#fieldPlace").value = item ? item.place : "";
+    $("#fieldNote").value = item ? item.note : "";
+    $("#deleteBlock").hidden = !item;
     editorBackdrop.hidden = false;
     document.body.classList.add("editor-open");
     window.requestAnimationFrame(() => $("#fieldTitle").focus());
@@ -544,23 +936,17 @@
   }
 
   function nextPosition(dayId) {
-    const day = state.days.find((item) => item.id === Number(dayId)) || state.days[0];
+    const day = state.days.find((entry) => entry.id === Number(dayId)) || state.days[0];
     const count = dayCount(day.id);
-    return { x: day.x + (BLOCK_X - DAY_X) + count * BLOCK_PITCH, y: day.y };
+    return { x: day.x, y: BLOCK_Y0 + count * BLOCK_PITCH };
   }
 
   blockForm.addEventListener("submit", (event) => {
     event.preventDefault();
     const form = new FormData(blockForm);
-    const title = String(form.get("title") || "").trim();
-    if (!title) {
-      $("#fieldTitle").focus();
-      return;
-    }
-    const dayId = Number(form.get("dayId"));
     const payload = {
-      title: title.slice(0, 80),
-      dayId,
+      title: String(form.get("title") || "").trim().slice(0, 80),
+      dayId: Number(form.get("dayId")),
       kind: KIND[String(form.get("kind"))] ? String(form.get("kind")) : "explore",
       start: String(form.get("start") || "10:00"),
       duration: clamp(Number(form.get("duration")) || 60, 15, 600),
@@ -568,47 +954,51 @@
       place: String(form.get("place") || "").trim().slice(0, 100),
       note: String(form.get("note") || "").trim().slice(0, 240),
     };
+    if (!payload.title) {
+      $("#fieldTitle").focus();
+      return;
+    }
 
     if (editingId) {
-      const block = state.blocks.find((item) => item.id === editingId);
-      if (!block) return;
-      const dayChanged = block.dayId !== dayId;
-      Object.assign(block, payload);
+      const item = state.blocks.find((entry) => entry.id === editingId);
+      if (!item) return;
+      const dayChanged = item.dayId !== payload.dayId;
+      Object.assign(item, payload);
       if (dayChanged) {
-        const pos = nextPosition(dayId);
-        block.x = pos.x;
-        block.y = pos.y;
+        const position = nextPosition(payload.dayId);
+        item.x = position.x;
+        item.y = position.y;
       }
-      showToast("Block updated · saved locally");
+      showToast("Block updated · saved with this conversation");
     } else {
-      const pos = nextPosition(dayId);
+      const position = nextPosition(payload.dayId);
       state.blocks.push({
-        id: `demo-${Date.now()}`,
+        id: `${store.activeId}-${Date.now()}`,
         ...payload,
-        x: pos.x,
-        y: pos.y,
+        x: position.x,
+        y: position.y,
         w: SIZES.block.w,
         h: SIZES.block.h,
       });
-      showToast("Block added · saved locally");
+      showToast("Block added · saved with this conversation");
     }
 
     selectedId = editingId;
     closeEditor();
-    render();
-    saveState();
+    renderAll();
+    saveStore();
   });
 
   $("#deleteBlock").addEventListener("click", () => {
     if (!editingId) return;
-    const block = state.blocks.find((item) => item.id === editingId);
-    if (!block) return;
-    state.blocks = state.blocks.filter((item) => item.id !== editingId);
+    const item = state.blocks.find((entry) => entry.id === editingId);
+    if (!item) return;
+    state.blocks = state.blocks.filter((entry) => entry.id !== editingId);
     selectedId = null;
     closeEditor();
-    render();
-    saveState();
-    showToast(`Removed “${block.title}” · saved locally`);
+    renderAll();
+    saveStore();
+    showToast(`Removed “${item.title}” · saved with this conversation`);
   });
 
   $("#editorClose").addEventListener("click", closeEditor);
@@ -625,17 +1015,20 @@
   $("#zoomIn").addEventListener("click", () => zoomAt(1.12));
   $("#zoomOut").addEventListener("click", () => zoomAt(1 / 1.12));
   $("#resetGraph").addEventListener("click", () => {
-    state = seedState();
+    store = seedStore();
+    state = store.trees[store.activeId];
     selectedId = null;
     hasFitted = false;
+    thinkingOpen = true;
+    applyThinkingOpen();
     try {
       localStorage.removeItem(STORE_KEY);
     } catch {
       // Ignore storage failures; reset is still visible in this session.
     }
-    render();
+    renderAll();
     requestAnimationFrame(fitGraph);
-    showToast("Demo graph reset");
+    showToast("Demo reset · three saved drafts restored");
   });
 
   viewport.addEventListener(
@@ -684,91 +1077,22 @@
     resizeTimer = window.setTimeout(() => {
       if (!editorBackdrop.hidden) return;
       fitGraph();
+      updateTranscriptFade();
     }, 180);
   });
 
-  function renderConversations() {
-    const list = $("#convList");
-    list.replaceChildren();
-    conversations.forEach((conv, index) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = `conv-item${index === activeConversation ? " is-active" : ""}`;
-      button.setAttribute("role", "tab");
-      button.setAttribute("aria-selected", String(index === activeConversation));
-      button.innerHTML = `
-        <div class="conv-item-top"><span>${conv.date}</span><span>${conv.source}</span></div>
-        <strong>${conv.title}</strong>
-        <p>${conv.prompt}</p>
-      `;
-      button.addEventListener("click", () => {
-        activeConversation = index;
-        renderConversations();
-        renderTranscript();
-      });
-      list.appendChild(button);
-    });
-  }
-
-  function messageElement(role, text, meta) {
-    const wrap = document.createElement("div");
-    wrap.className = `message message--${role}`;
-    const label = document.createElement("div");
-    label.className = "message-label";
-    const left = document.createElement("span");
-    left.textContent = role === "user" ? "Traveller" : "Wander / managed agent";
-    const right = document.createElement("span");
-    right.textContent = meta || "";
-    label.append(left, right);
-    const body = document.createElement("div");
-    body.className = "message-body";
-    body.textContent = text;
-    wrap.append(label, body);
-    return wrap;
-  }
-
-  function renderTranscript() {
-    const conv = conversations[activeConversation];
-    const root = $("#convTranscript");
-    root.replaceChildren();
-
-    const head = document.createElement("div");
-    head.className = "transcript-head";
-    head.innerHTML = `
-      <div><span>Saved ${conv.date}</span><strong>${conv.title}</strong></div>
-      <span class="source-tag">${conv.source}</span>
-    `;
-    root.appendChild(head);
-    root.appendChild(messageElement("user", conv.prompt, "you"));
-    const agent = messageElement("agent", conv.reply, conv.source === "Managed Agent" ? "grounded" : "no model");
-    if (conv.suggestion) {
-      const card = document.createElement("div");
-      card.className = "suggestion";
-      card.innerHTML = `
-        <span class="suggestion-label">Suggested block · not applied</span>
-        <strong>${conv.suggestion.title}</strong>
-        <span>${conv.suggestion.meta}</span>
-      `;
-      agent.appendChild(card);
-    }
-    root.appendChild(agent);
-
-    const note = document.createElement("p");
-    note.className = "readonly-line";
-    note.textContent = "Read-only record · this demo has no composer and calls no model.";
-    root.appendChild(note);
-  }
-
   // Init.
-  state = loadState();
-  render();
-  renderConversations();
-  renderTranscript();
+  store = loadStore();
+  state = store.trees[store.activeId];
+  renderAll();
   requestAnimationFrame(fitGraph);
 
   window.__tripblocksDemo = {
     reset: () => $("#resetGraph").click(),
+    selectSession,
+    getActiveId: () => store.activeId,
     getState: () => JSON.parse(JSON.stringify(state)),
+    getStore: () => JSON.parse(JSON.stringify(store)),
     fit: fitGraph,
   };
 })();

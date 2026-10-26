@@ -1,4 +1,5 @@
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -15,19 +16,39 @@ import {
   type NodeProps,
   type NodeTypes,
   type ReactFlowInstance,
+  type Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { LayoutGrid, Lock, MapPin, Plus, RefreshCcw } from "lucide-react";
+import { LayoutGrid, Lock, MapPin, Maximize2, Plus, RefreshCcw } from "lucide-react";
 import { cityMeta, formatTime, formatYen, kindMeta, parseMinutes } from "../data";
 import type { Block, Day, Trip } from "../types";
 import { KindIcon } from "./KindIcon";
 
-const DAY_WIDTH = 248;
-const DAY_X = 360;
-const BLOCK_X = DAY_X + DAY_WIDTH + 68;
-const BLOCK_PITCH = DAY_WIDTH + 20;
-const ROW_PITCH = 118;
-const BLOCK_OFFSET_Y = 11;
+/* Compact geometry: the graph has to read inside a ~720px centre pane, so the
+   day column is 208px and blocks pitch 224px instead of the old 248/268. */
+const DAY_WIDTH = 208;
+const DAY_X = 256;
+const BLOCK_WIDTH = 208;
+const BLOCK_X = DAY_X + DAY_WIDTH + 36;
+const BLOCK_PITCH = BLOCK_WIDTH + 16;
+const ROW_PITCH = 148;
+const BLOCK_OFFSET_Y = 14;
+
+const FIT_PADDING = 0.12;
+const FIT_MAX_ZOOM = 0.85;
+/* Below this container width a full-tree fit becomes a postage stamp, so the
+   first frame keeps a readable scale anchored at the root instead. */
+const NARROW_CANVAS = 560;
+const NARROW_ZOOM = 0.45;
+const READABLE_CANVAS = 900;
+const READABLE_ZOOM = 0.8;
+
+const CARD_SHADOW = "0 1px 2px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.08)";
+const SELECTED_SHADOW =
+  "0 0 0 1.5px #d97757, 0 0 6px rgba(217,119,87,0.25), 0 1px 2px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.08)";
+const EDGE_NEUTRAL = "rgba(0,0,0,0.38)";
+const EDGE_SELECTED = "#d97757";
+const EDGE_MARKER_NEUTRAL = "rgba(0,0,0,0.46)";
 
 type TripNodeData = {
   trip: Trip;
@@ -60,48 +81,40 @@ type CanvasEdge = Edge & {
 
 const hiddenHandle = { opacity: 0 } as const;
 
-const statusDot: Record<"moss" | "clay" | "sun", string> = {
-  moss: "#53624d",
-  clay: "#bd6040",
-  sun: "#dba64d",
-};
-
 const TripNodeView = memo(function TripNodeView({ data }: NodeProps<TripFlowNode>) {
   const { trip, spent } = data;
 
   return (
-    <div className="w-[272px] rounded-2xl border border-clay/25 bg-card/85 px-4 py-4 shadow-[0_18px_40px_-32px_rgba(72,50,32,.65)] backdrop-blur-sm">
-      <div className="flex items-center gap-1.5 text-[8.5px] font-medium tracking-[0.18em] text-faint">
-        <span className="h-1 w-1 rounded-full bg-clay" /> TRIP ROOT
+    <div
+      className="w-[232px] rounded-xl border border-black/10 bg-white px-4 py-3.5"
+      style={{ boxShadow: CARD_SHADOW }}
+    >
+      <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.12em] text-[#6d6b67]">
+        <span className="h-1.5 w-1.5 rounded-full bg-clay" /> Trip root
       </div>
-      <h3 className="mt-2 font-display text-[26px] leading-[1.02]">{trip.title}</h3>
-      <p className="mt-1.5 text-[10px] leading-relaxed text-muted">{trip.subtitle}</p>
+      <h3 className="mt-1.5 line-clamp-2 text-[15px] font-semibold leading-5 tracking-[-0.01em] text-ink">
+        {trip.title}
+      </h3>
+      <p className="mt-1 line-clamp-2 text-[12px] leading-4 text-[#525252]">{trip.subtitle}</p>
 
-      <div className="mt-3 space-y-1.5 border-t border-line/60 pt-2.5 text-[9.5px] text-muted">
-        <div className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: statusDot.moss }} />
-            {trip.days.length} days · {trip.blocks.length} blocks
-          </span>
-          <span className="tabular-nums text-faint">{trip.pace} pace</span>
+      <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-black/[.06] pt-2.5 text-[11px] leading-4">
+        <div>
+          <dt className="text-[#6d6b67]">Days</dt>
+          <dd className="tabular-nums text-ink">{trip.days.length}</dd>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: statusDot.clay }} />
-            {formatYen(spent)}
-          </span>
-          <span className="tabular-nums text-faint">of {formatYen(trip.budget)}</span>
+        <div>
+          <dt className="text-[#6d6b67]">Blocks</dt>
+          <dd className="tabular-nums text-ink">{trip.blocks.length}</dd>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: statusDot.sun }} />
-            {trip.travelers} travellers
-          </span>
-          <span className="flex items-center gap-1 text-clay/80">
-            <span className="h-1 w-1 rounded-full bg-clay" /> live graph
-          </span>
+        <div>
+          <dt className="text-[#6d6b67]">Planned</dt>
+          <dd className="tabular-nums text-ink">{formatYen(spent)}</dd>
         </div>
-      </div>
+        <div>
+          <dt className="text-[#6d6b67]">Budget</dt>
+          <dd className="tabular-nums text-[#525252]">{formatYen(trip.budget)}</dd>
+        </div>
+      </dl>
 
       <Handle type="source" position={Position.Right} id="root-out" isConnectable={false} style={hiddenHandle} />
     </div>
@@ -117,6 +130,7 @@ const DayNodeView = memo(function DayNodeView({ data }: NodeProps<DayFlowNode>) 
       role="button"
       tabIndex={0}
       aria-label={`Day ${day.id}, ${day.label} ${day.date}, ${meta.name}`}
+      aria-pressed={active}
       onClick={() => onActivateDay(day.id)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -124,26 +138,14 @@ const DayNodeView = memo(function DayNodeView({ data }: NodeProps<DayFlowNode>) 
           onActivateDay(day.id);
         }
       }}
-      className={`w-[248px] select-none rounded-2xl border bg-card/85 px-3.5 py-3 text-left backdrop-blur-sm transition-[border-color,box-shadow] duration-200 ease-out ${
+      className={`w-[208px] select-none rounded-xl border bg-white px-3.5 py-2.5 text-left transition-[border-color,box-shadow] duration-150 ease-out ${
         active
-          ? "border-clay/45 shadow-[0_12px_30px_-24px_rgba(80,50,30,.6)]"
-          : "border-line/80 shadow-[0_1px_0_rgba(255,255,255,.6)_inset] hover:border-clay/25"
+          ? "border-clay shadow-[0_0_0_1px_rgba(217,119,87,0.35),0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.08)]"
+          : "border-black/10 shadow-[0_1px_2px_rgba(0,0,0,0.05),0_2px_8px_rgba(0,0,0,0.08)] hover:border-black/20"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2.5">
-          <span className="font-display text-[28px] leading-none text-ink">{day.date}</span>
-          <div className="min-w-0 pt-0.5">
-            <div className="text-[8.5px] font-medium tracking-[0.16em] text-faint">
-              {day.month} · DAY {String(day.id).padStart(2, "0")}
-            </div>
-            <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.ink }} />
-              {meta.name} · {day.label}
-            </div>
-            <div className="mt-0.5 truncate text-[9.5px] text-faint">{day.title}</div>
-          </div>
-        </div>
+        <span className="text-[26px] font-semibold leading-none tracking-[-0.02em] text-ink">{day.date}</span>
         <button
           type="button"
           onClick={(event) => {
@@ -152,19 +154,30 @@ const DayNodeView = memo(function DayNodeView({ data }: NodeProps<DayFlowNode>) 
           }}
           onPointerDown={(event) => event.stopPropagation()}
           aria-label={`Add a block to Day ${day.id}`}
-          className="nodrag grid h-6 w-6 shrink-0 place-items-center rounded-full border border-line/80 bg-paper/40 text-faint transition hover:border-clay/40 hover:text-clay"
+          className="nodrag grid h-6 w-6 shrink-0 place-items-center rounded-lg border border-black/10 bg-white text-[#6d6b67] transition-colors duration-150 hover:border-black/20 hover:bg-black/[.04] hover:text-ink"
         >
-          <Plus size={12} />
+          <Plus size={13} />
         </button>
       </div>
 
-      <div className="mt-2.5 flex items-center gap-2 border-t border-line/50 pt-2 text-[9px] tabular-nums text-faint">
-        <span className={active ? "text-clay" : ""}>
-          {count} {count === 1 ? "node" : "nodes"}
+      <div className="mt-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-[#6d6b67]">
+        {day.month} · Day {String(day.id).padStart(2, "0")}
+      </div>
+      <div className="mt-1 flex items-center gap-1.5 text-[12px] leading-4 text-[#525252]">
+        <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-clay" : "bg-[#8a8a8a]"}`} />
+        <span className="truncate">
+          {meta.name} · {day.label}
         </span>
-        <span className="h-2.5 w-px bg-line/70" />
+      </div>
+      <div className="mt-0.5 truncate text-[11px] leading-4 text-[#6d6b67]">{day.title}</div>
+
+      <div className="mt-2 flex items-center gap-2 border-t border-black/[.06] pt-2 text-[11px] tabular-nums text-[#6d6b67]">
+        <span className={active ? "text-clay-deep" : undefined}>
+          {count} {count === 1 ? "block" : "blocks"}
+        </span>
+        <span className="h-2.5 w-px bg-black/10" />
         <span>{Math.round(minutes / 60)}h</span>
-        <span className="h-2.5 w-px bg-line/70" />
+        <span className="h-2.5 w-px bg-black/10" />
         <span>{cost ? formatYen(cost) : "free"}</span>
       </div>
 
@@ -185,6 +198,7 @@ const BlockNodeView = memo(function BlockNodeView({ data }: NodeProps<BlockFlowN
       role="button"
       tabIndex={0}
       aria-label={`${block.title}, ${block.start}, ${block.duration} minutes, Day ${block.dayId}${block.locked ? ", booked" : ""}`}
+      aria-pressed={selected}
       onClick={() => onSelect(block.id)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -192,34 +206,30 @@ const BlockNodeView = memo(function BlockNodeView({ data }: NodeProps<BlockFlowN
           onSelect(block.id);
         }
       }}
-      style={{ borderLeft: `3px solid ${meta.tone}` }}
-      className={`group w-[248px] cursor-grab rounded-[14px] border bg-card px-3 py-2.5 text-left transition-[border-color,box-shadow] duration-200 ease-out active:cursor-grabbing ${
-        selected
-          ? "border-clay/50 shadow-[0_16px_34px_-26px_rgba(96,62,38,.8)] ring-2 ring-clay/15"
-          : "border-line/80 shadow-[0_1px_0_rgba(255,255,255,.65)_inset] hover:border-clay/30 hover:shadow-[0_12px_26px_-24px_rgba(60,45,28,.6)]"
+      className={`group w-[208px] cursor-grab rounded-xl border bg-white px-3 py-2.5 text-left transition-[translate,border-color] duration-150 ease-out hover:-translate-y-[1.5px] active:cursor-grabbing ${
+        selected ? "border-clay" : "border-black/10 hover:border-black/20"
       }`}
+      style={{ boxShadow: selected ? SELECTED_SHADOW : CARD_SHADOW }}
     >
       <div className="flex items-center justify-between gap-2">
-        <span
-          className="flex items-center gap-1 text-[8.5px] font-medium uppercase tracking-[0.09em]"
-          style={{ color: meta.tone }}
-        >
-          <KindIcon kind={block.kind} size={11} /> {meta.label}
+        <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#6d6b67]">
+          <KindIcon kind={block.kind} size={12} className={selected ? "text-clay-deep" : "text-[#8a8a8a]"} />
+          {meta.label}
         </span>
-        <span className="flex items-center gap-1 text-[9px] tabular-nums text-faint">
-          {block.locked && <Lock size={9} className="text-[#a8863f]" aria-hidden />}
+        <span className="flex items-center gap-1 text-[11px] tabular-nums text-[#6d6b67]">
+          {block.locked && <Lock size={11} className="text-[#8a8a8a]" aria-hidden />}
           {block.start} · {block.duration}m
         </span>
       </div>
 
-      <div className="mt-1.5 truncate text-[13.5px] font-medium leading-snug text-ink">{block.title}</div>
+      <div className="mt-1.5 truncate text-[14px] font-medium leading-[1.3] text-ink">{block.title}</div>
 
-      <div className="mt-1 flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-1 text-[10px] text-muted">
-          <MapPin size={9} className="shrink-0 text-faint" aria-hidden />
+      <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-[#525252]">
+        <span className="flex min-w-0 items-center gap-1">
+          <MapPin size={11} className="shrink-0 text-[#8a8a8a]" aria-hidden />
           <span className="truncate">{block.place}</span>
         </span>
-        <span className="shrink-0 text-[10px] tabular-nums text-muted">
+        <span className="shrink-0 tabular-nums text-[#6d6b67]">
           {block.cost ? formatYen(block.cost) : "free"}
         </span>
       </div>
@@ -236,12 +246,6 @@ const nodeTypes: NodeTypes = {
   day: DayNodeView,
 };
 
-function initialViewport() {
-  const width = typeof window === "undefined" ? 1280 : window.innerWidth;
-  const zoom = width < 640 ? 0.55 : width < 1280 ? 0.62 : 0.65;
-  return { x: width < 640 ? 14 : 28, y: 16, zoom };
-}
-
 interface CanvasBoardProps {
   trip: Trip;
   selectedId: string | null;
@@ -254,6 +258,10 @@ interface CanvasBoardProps {
   ) => void;
   onResetLayout: () => void;
   onBoard: () => void;
+  /** Stable identity for the active conversation/session. Falls back to the trip itself. */
+  sessionKey?: string;
+  /** Optional per-session viewport supplied by the host. */
+  initialViewport?: Viewport | null;
 }
 
 function orderedBlocks(blocks: Block[]): Block[] {
@@ -388,7 +396,19 @@ function orderedForEdges(trip: Trip, dayBlocks: Block[]): Block[] {
     .map((entry) => entry.block);
 }
 
-function buildEdges(trip: Trip): CanvasEdge[] {
+function edgePaint(active: boolean) {
+  return {
+    style: { stroke: active ? EDGE_SELECTED : EDGE_NEUTRAL, strokeWidth: active ? 1.6 : 1.3 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 11,
+      height: 11,
+      color: active ? EDGE_SELECTED : EDGE_MARKER_NEUTRAL,
+    },
+  };
+}
+
+function buildEdges(trip: Trip, selectedId: string | null): CanvasEdge[] {
   const byDay = blocksByDay(trip);
   const edges: CanvasEdge[] = [];
 
@@ -406,8 +426,7 @@ function buildEdges(trip: Trip): CanvasEdge[] {
             targetHandle: "day-in",
             type: "smoothstep",
             pathOptions: { borderRadius: 16, offset: 16 },
-            style: { stroke: "#b99d85", strokeWidth: 1.55 },
-            markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: "#a98d75" },
+            ...edgePaint(false),
             selectable: false,
             focusable: false,
             zIndex: 0,
@@ -420,8 +439,7 @@ function buildEdges(trip: Trip): CanvasEdge[] {
             targetHandle: "day-left",
             type: "smoothstep",
             pathOptions: { borderRadius: 18, offset: 18 },
-            style: { stroke: "#bfa68d", strokeWidth: 1.5 },
-            markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: "#a98d75" },
+            ...edgePaint(false),
             selectable: false,
             focusable: false,
             zIndex: 0,
@@ -438,8 +456,7 @@ function buildEdges(trip: Trip): CanvasEdge[] {
       targetHandle: "block-left",
       type: "smoothstep",
       pathOptions: { borderRadius: 14, offset: 14 },
-      style: { stroke: "#c8b7a1", strokeWidth: 1.4 },
-      markerEnd: { type: MarkerType.ArrowClosed, width: 9, height: 9, color: "#ad9a83" },
+      ...edgePaint(blocks[0].id === selectedId),
       selectable: false,
       focusable: false,
       zIndex: 0,
@@ -456,8 +473,7 @@ function buildEdges(trip: Trip): CanvasEdge[] {
         targetHandle: "block-left",
         type: "smoothstep",
         pathOptions: { borderRadius: 14, offset: 14 },
-        style: { stroke: "#c78d75", strokeWidth: 1.5 },
-        markerEnd: { type: MarkerType.ArrowClosed, width: 9, height: 9, color: "#b77b63" },
+        ...edgePaint(block.id === selectedId || next.id === selectedId),
         selectable: false,
         focusable: false,
         zIndex: 0,
@@ -468,6 +484,18 @@ function buildEdges(trip: Trip): CanvasEdge[] {
   return edges;
 }
 
+const CANVAS_VARS = {
+  "--xy-background-color": "#f9f9f7",
+  "--xy-edge-stroke": EDGE_NEUTRAL,
+  "--xy-edge-stroke-selected": EDGE_SELECTED,
+  "--xy-handle-background-color": "#ffffff",
+  "--xy-handle-border-color": "rgba(0,0,0,0.16)",
+  "--xy-minimap-background-color": "#ffffff",
+  "--xy-minimap-mask-background-color": "rgba(249,249,247,0.74)",
+  "--xy-minimap-node-background-color": "rgba(0,0,0,0.16)",
+  "--xy-minimap-node-stroke-color": "transparent",
+} as CSSProperties;
+
 export function CanvasBoard({
   trip,
   selectedId,
@@ -476,11 +504,74 @@ export function CanvasBoard({
   onMove,
   onResetLayout,
   onBoard,
+  sessionKey,
+  initialViewport,
 }: CanvasBoardProps) {
+  const tripKey = sessionKey ?? `${trip.title}|${trip.startDate}`;
   const [activeDay, setActiveDay] = useState(() => trip.days[0]?.id ?? 1);
   const [flow, setFlow] = useState<ReactFlowInstance<AppNode, CanvasEdge> | null>(null);
-  const [fitToken, setFitToken] = useState(0);
-  const [startViewport] = useState(initialViewport);
+  const [nodes, setNodes] = useState<AppNode[]>(() =>
+    buildNodes(trip, selectedId, trip.days[0]?.id ?? 1, 0, () => {}, () => {}, onSelect),
+  );
+
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const savedViewports = useRef(new Map<string, Viewport>());
+  const pendingFit = useRef(true);
+  const pendingRestore = useRef<Viewport | null>(null);
+  const frames = useRef<number[]>([]);
+  const previousKey = useRef(tripKey);
+
+  const clearFrames = useCallback(() => {
+    frames.current.forEach((frame) => cancelAnimationFrame(frame));
+    frames.current = [];
+  }, []);
+
+  const frameViewport = useCallback(
+    (duration = 0) => {
+      if (!flow) return;
+      const rect = wrapRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      if (rect.width < NARROW_CANVAS) {
+        void flow.setViewport({ x: 10, y: 10, zoom: NARROW_ZOOM }, { duration });
+        return;
+      }
+      void flow.fitView({ padding: FIT_PADDING, maxZoom: FIT_MAX_ZOOM, duration });
+    },
+    [flow],
+  );
+
+  const frameReadable = useCallback(
+    (duration = 0) => {
+      if (!flow) return;
+      const rect = wrapRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      if (rect.width < NARROW_CANVAS) {
+        void flow.setViewport({ x: 10, y: 10, zoom: NARROW_ZOOM }, { duration });
+        return;
+      }
+      if (rect.width < READABLE_CANVAS) {
+        void flow.setViewport({ x: 12, y: 8, zoom: READABLE_ZOOM }, { duration });
+        return;
+      }
+      void flow.fitView({ padding: FIT_PADDING, maxZoom: FIT_MAX_ZOOM, duration });
+    },
+    [flow],
+  );
+
+  const runFit = useCallback(
+    (duration = 0) => {
+      if (!flow) return;
+      clearFrames();
+      const first = requestAnimationFrame(() => {
+        const second = requestAnimationFrame(() => frameViewport(duration));
+        frames.current.push(second);
+      });
+      frames.current.push(first);
+    },
+    [clearFrames, flow, frameViewport],
+  );
+
+  useEffect(() => clearFrames, [clearFrames]);
 
   const activateDay = useCallback((dayId: number) => setActiveDay(dayId), []);
   const addToDay = useCallback(
@@ -498,13 +589,11 @@ export function CanvasBoard({
     [trip, selectedId, activeDay, spent, addToDay, activateDay, onSelect],
   );
 
-  const [nodes, setNodes] = useState<AppNode[]>(layoutNodes);
-
   useEffect(() => {
     setNodes(layoutNodes);
   }, [layoutNodes]);
 
-  const edges = useMemo(() => buildEdges(trip), [trip]);
+  const edges = useMemo(() => buildEdges(trip, selectedId), [trip, selectedId]);
 
   const handleNodesChange = useCallback((changes: NodeChange<AppNode>[]) => {
     setNodes((current) => applyNodeChanges(changes, current));
@@ -550,120 +639,201 @@ export function CanvasBoard({
     setFlow(instance);
   }, []);
 
+  const handleMoveEnd = useCallback(
+    (_event: MouseEvent | TouchEvent | null, viewport: Viewport) => {
+      savedViewports.current.set(tripKey, viewport);
+    },
+    [tripKey],
+  );
+
+  /* A session switch must not inherit the previous trip's pan, zoom or day. */
   useEffect(() => {
-    if (!fitToken || !flow) return;
+    if (previousKey.current === tripKey) return;
+    previousKey.current = tripKey;
+    setActiveDay(trip.days[0]?.id ?? 1);
+    const stored = savedViewports.current.get(tripKey) ?? null;
+    if (stored) {
+      pendingFit.current = false;
+      pendingRestore.current = stored;
+    } else {
+      pendingRestore.current = null;
+      pendingFit.current = true;
+    }
+  }, [tripKey, trip.days]);
+
+  useEffect(() => {
+    if (!flow) return;
+    if (pendingRestore.current) {
+      const viewport = pendingRestore.current;
+      pendingRestore.current = null;
+      const frame = requestAnimationFrame(() => {
+        void flow.setViewport(viewport);
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+    if (pendingFit.current) {
+      pendingFit.current = false;
+      frameReadable();
+    }
+  }, [nodes, flow, runFit]);
+
+  useEffect(() => {
+    if (!flow || !initialViewport) return;
+    pendingFit.current = false;
+    clearFrames();
     const frame = requestAnimationFrame(() => {
-      void flow.setViewport({ ...startViewport, zoom: Math.max(startViewport.zoom, 0.72) }, { duration: 320 });
+      void flow.setViewport(initialViewport);
     });
     return () => cancelAnimationFrame(frame);
-  }, [fitToken, flow, startViewport]);
+  }, [flow, initialViewport, clearFrames]);
+
+  /* The viewport is derived from the real canvas box, never from window width. */
+  useEffect(() => {
+    const node = wrapRef.current;
+    if (!node || !flow) return;
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => frameReadable(0));
+    });
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [flow, frameReadable]);
 
   function resetLayout() {
     onResetLayout();
-    setFitToken((token) => token + 1);
+    pendingFit.current = true;
   }
 
   return (
-    <div className="animate-in flex h-full min-h-0 w-full min-w-0 flex-col">
-      <header className="flex shrink-0 flex-wrap items-end justify-between gap-3 border-b border-line/60 px-4 pb-4 pt-5 md:px-7">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[10px] font-medium tracking-[0.16em] text-faint">
-            <span className="h-px w-4 bg-line" /> WEEK CANVAS
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col bg-[#fcfcfb]">
+      <style>{`
+        .tripblocks-canvas .react-flow__controls-button { width: 32px; height: 32px; }
+        .tripblocks-canvas .react-flow__controls-button svg { max-width: 14px; max-height: 14px; }
+        .tripblocks-canvas .react-flow__pane { cursor: grab; }
+        .tripblocks-canvas .react-flow__pane.dragging { cursor: grabbing; }
+      `}</style>
+      <header className="flex shrink-0 flex-col gap-2 border-b border-black/10 px-4 pb-2.5 pt-3 md:px-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-[15px] font-semibold leading-5 tracking-[-0.01em] text-ink">
+              {trip.title}
+            </h2>
+            <p className="mt-0.5 truncate text-[11px] leading-4 text-[#6d6b67]">
+              {trip.days.length} days · {trip.blocks.length} blocks · {formatYen(spent)} of{" "}
+              {formatYen(trip.budget)} planned
+            </p>
           </div>
-          <h2 className="mt-1.5 font-display text-[28px] leading-none">Move a node. The week changes.</h2>
-          <p className="mt-1.5 text-[10.5px] leading-relaxed text-muted">
-            Day 1 runs into Day 2, and each day runs block by block. Drag a card, click to edit — every change lands here.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pb-0.5 text-[9.5px] text-muted">
-          <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-moss" /> Saved on this device
+          <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-[#6d6b67]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />
+            Saved
           </span>
-          <span className="text-line">|</span>
-          <span className="tabular-nums">{trip.blocks.length} nodes</span>
-          <span className="tabular-nums">{trip.days.length} days</span>
-          <span className="tabular-nums font-medium text-ink">{formatYen(spent)}</span>
         </div>
-      </header>
 
-      <div className="flex min-h-0 flex-1 flex-col px-4 pb-3 pt-3 md:px-7">
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-y border-line/60 py-2.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-1.5 text-[10px] text-faint">
-              <span className="sr-only">Day for the new node</span>
-              <select
-                value={activeDay}
-                onChange={(event) => activateDay(Number(event.target.value))}
-                className="rounded-full border border-line/80 bg-card/60 py-1.5 pl-2.5 pr-1 text-[10px] text-ink outline-none transition focus:border-clay/50"
-              >
-                {trip.days.map((day) => (
-                  <option key={day.id} value={day.id}>
-                    Day {day.id} · {day.label} {day.date}
-                  </option>
-                ))}
-              </select>
-            </label>
+        <div className="flex h-10 items-center gap-2 overflow-x-auto no-scrollbar">
+          <label className="flex shrink-0 items-center">
+            <span className="sr-only">Day for the new block</span>
+            <select
+              value={activeDay}
+              onChange={(event) => activateDay(Number(event.target.value))}
+              className="h-7 max-w-[168px] rounded-lg border border-black/10 bg-white px-2 text-[11px] text-ink outline-none transition-colors duration-150 focus:border-clay/60"
+            >
+              {trip.days.map((day) => (
+                <option key={day.id} value={day.id}>
+                  Day {day.id} · {day.label} {day.date}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={() => addToDay(activeDay)}
+            className="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-clay-deep px-2.5 text-[11px] font-medium text-white transition-colors duration-150 hover:bg-[#a34a2a]"
+          >
+            <Plus size={12} /> <span className="hidden sm:inline">Add to Day {activeDay}</span>
+            <span className="sm:hidden">Add</span>
+          </button>
+
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             <button
               type="button"
-              onClick={() => addToDay(activeDay)}
-              className="flex items-center gap-1.5 rounded-full bg-clay px-3 py-1.5 text-[10.5px] font-medium text-white transition-colors duration-200 hover:bg-clay-deep"
+              onClick={() => runFit(200)}
+              aria-label="Fit the graph to the canvas"
+              title="Fit"
+              className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-[11px] text-[#525252] transition-colors duration-150 hover:bg-black/5 hover:text-ink"
             >
-              <Plus size={12} /> Add to Day {activeDay}
+              <Maximize2 size={12} /> <span className="hidden sm:inline">Fit</span>
             </button>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={resetLayout}
-              className="flex items-center gap-1.5 rounded-full border border-line/80 bg-card/55 px-3 py-1.5 text-[10.5px] text-muted transition-colors duration-200 hover:border-clay/30 hover:text-clay"
+              aria-label="Restore automatic layout"
+              title="Auto layout"
+              className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-[11px] text-[#525252] transition-colors duration-150 hover:bg-black/5 hover:text-ink"
             >
-              <RefreshCcw size={12} /> Auto layout
+              <RefreshCcw size={12} /> <span className="hidden sm:inline">Auto layout</span>
             </button>
             <button
               type="button"
               onClick={onBoard}
-              className="flex items-center gap-1.5 rounded-full border border-line/80 bg-card/55 px-3 py-1.5 text-[10.5px] text-muted transition-colors duration-200 hover:border-clay/30 hover:text-clay"
+              aria-label="Open board view"
+              title="Board"
+              className="flex h-7 items-center gap-1.5 rounded-lg px-2 text-[11px] text-[#525252] transition-colors duration-150 hover:bg-black/5 hover:text-ink"
             >
-              <LayoutGrid size={12} /> Board view
+              <LayoutGrid size={12} /> <span className="hidden sm:inline">Board</span>
             </button>
           </div>
         </div>
+      </header>
 
-        <div className="tripblocks-canvas relative mt-3 min-h-0 w-full flex-1 overflow-hidden rounded-2xl border border-line/70 bg-surface-0">
+      <div className="flex min-h-0 flex-1 flex-col px-3 pb-2 pt-2 md:px-5">
+        <div
+          ref={wrapRef}
+          className="tripblocks-canvas relative min-h-0 w-full flex-1 overflow-hidden rounded-xl border border-black/10 bg-[#f9f9f7]"
+        >
           <ReactFlow<AppNode, CanvasEdge>
+            key={tripKey}
+            fitView
+            fitViewOptions={{ padding: FIT_PADDING, maxZoom: FIT_MAX_ZOOM }}
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
             onNodesChange={handleNodesChange}
             onNodeDragStop={handleDragStop}
             onInit={handleInit}
-            defaultViewport={startViewport}
-            minZoom={0.2}
-            maxZoom={1.5}
+            onMoveEnd={handleMoveEnd}
+            minZoom={0.15}
+            maxZoom={1.4}
             nodeDragThreshold={3}
-            onlyRenderVisibleElements
             nodesConnectable={false}
             nodesFocusable={false}
             elementsSelectable={false}
-            className="[&_.react-flow__pane]:cursor-grab"
+            style={CANVAS_VARS}
           >
-            <Background variant={BackgroundVariant.Dots} gap={22} size={1.1} />
+            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="rgba(0,0,0,0.12)" />
             <MiniMap
               position="bottom-right"
               pannable
               zoomable
               ariaLabel="Trip minimap"
-              style={{ width: 108, height: 70 }}
-              className="!m-3 hidden sm:block opacity-90"
+              bgColor="#ffffff"
+              nodeColor="rgba(0,0,0,0.16)"
+              nodeStrokeColor="rgba(0,0,0,0.10)"
+              nodeBorderRadius={4}
+              maskColor="rgba(249,249,247,0.74)"
+              style={{ width: 112, height: 72 }}
+              className="!m-3 hidden rounded-[10px] sm:block"
             />
             <Controls position="bottom-left" showInteractive={false} />
           </ReactFlow>
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5 text-[9px] text-faint">
-          <span>Drag a card across day rows to reschedule · move it left or right to reorder · click to edit.</span>
-          <span>Scroll to zoom · drag the canvas to pan · Auto layout resets positions.</span>
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2 text-[11px] leading-4 text-[#6d6b67]">
+          <span>Drag a card across day rows to reschedule · move it left or right to reorder.</span>
+          <span className="tabular-nums">Scroll to zoom · drag to pan · Fit resets the view.</span>
         </div>
       </div>
     </div>

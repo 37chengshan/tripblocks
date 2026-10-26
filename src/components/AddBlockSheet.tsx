@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowRight, Coffee, Landmark, Plus, Sparkles, TrainFront, TreePine, X } from "lucide-react";
 import { kindMeta } from "../data";
+import { useDialogFocus } from "../lib/useDialogFocus";
 import type { Block, BlockKind, Day } from "../types";
 import { KindIcon } from "./KindIcon";
 
@@ -10,6 +11,9 @@ const templates: Array<{ title: string; kind: BlockKind; duration: number; cost:
   { title: "Train to somewhere", kind: "travel", duration: 45, cost: 1000, place: "From → to", icon: TrainFront },
   { title: "Free time", kind: "reset", duration: 120, cost: 0, place: "Keep it empty", icon: TreePine },
 ];
+
+const inputClass =
+  "w-full rounded-[10px] border border-black/10 bg-white px-3 py-2.5 text-[14px] leading-5 text-ink outline-none transition-colors duration-150 placeholder:text-[#8a8a8a] focus:border-clay/60";
 
 export function AddBlockSheet({
   days,
@@ -29,6 +33,7 @@ export function AddBlockSheet({
   const [start, setStart] = useState("10:00");
   const [duration, setDuration] = useState(90);
   const [cost, setCost] = useState(0);
+  const panelRef = useDialogFocus(onClose);
 
   const addTemplate = (template: (typeof templates)[number]) => {
     onAdd({
@@ -59,27 +64,43 @@ export function AddBlockSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <button aria-label="Close" className="absolute inset-0 bg-ink/25 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="animate-in relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-line bg-card p-5 shadow-2xl sm:max-w-[540px] sm:rounded-2xl sm:p-6">
-        <div className="flex items-start justify-between">
+      <button aria-label="Close" className="absolute inset-0 bg-black/25" onClick={onClose} />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Add a block"
+        className="animate-in relative max-h-[92vh] w-full overflow-y-auto rounded-t-xl border border-black/10 bg-white p-5 shadow-[0_16px_40px_rgba(0,0,0,0.16)] sm:max-w-[540px] sm:rounded-xl sm:p-6"
+      >
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-1.5 text-[9px] font-medium tracking-[0.16em] text-clay"><Sparkles size={11} /> ADD TO THE PLAN</div>
-            <h2 className="mt-2 font-display text-[30px] leading-none">What sounds good?</h2>
+            <div className="flex items-center gap-1.5 text-[11px] font-medium tracking-[0.12em] text-clay-deep">
+              <Sparkles size={12} /> ADD TO THE PLAN
+            </div>
+            <h2 className="mt-1 text-[20px] font-semibold leading-7 tracking-[-0.01em] text-ink">
+              What sounds good?
+            </h2>
           </div>
-          <button onClick={onClose} className="rounded-full p-1.5 text-faint transition hover:bg-paper hover:text-ink" aria-label="Close">
+          <button
+            onClick={onClose}
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[#6d6b67] transition-colors duration-150 hover:bg-black/5 hover:text-ink"
+            aria-label="Close"
+          >
             <X size={16} />
           </button>
         </div>
 
-        <div className="mt-4 flex items-center gap-2 text-[11px] text-muted">
+        <div className="mt-3 flex items-center gap-2 text-[12px] text-[#525252]">
           <span>Adding to</span>
           <select
             value={dayId}
             onChange={(event) => setDayId(Number(event.target.value))}
-            className="rounded-lg border border-line bg-paper/45 px-2.5 py-1.5 text-[11px] text-ink outline-none focus:border-clay/50"
+            className="h-8 rounded-lg border border-black/10 bg-white px-2 text-[12px] text-ink outline-none transition-colors duration-150 focus:border-clay/60"
           >
             {days.map((day) => (
-              <option key={day.id} value={day.id}>Day {day.id} · {day.label} {day.date}</option>
+              <option key={day.id} value={day.id}>
+                Day {day.id} · {day.label} {day.date}
+              </option>
             ))}
           </select>
         </div>
@@ -91,14 +112,16 @@ export function AddBlockSheet({
               <button
                 key={template.title}
                 onClick={() => addTemplate(template)}
-                className="group flex items-start gap-2.5 rounded-xl border border-line/80 bg-paper/30 p-3 text-left transition hover:-translate-y-0.5 hover:border-clay/30 hover:bg-paper/65"
+                className="group flex items-start gap-2.5 rounded-[10px] border border-black/10 bg-white p-3 text-left transition-colors duration-150 hover:border-black/20 hover:bg-[#fafafa]"
               >
-                <div className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full" style={{ background: kindMeta[template.kind].soft, color: kindMeta[template.kind].tone }}>
+                <div className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-black/[.04] text-[#525252]">
                   <Icon size={13} />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[11px] font-medium text-ink">{template.title}</div>
-                  <div className="mt-0.5 text-[9px] text-faint">{template.duration} min · {template.cost ? `¥${template.cost.toLocaleString()}` : "free"}</div>
+                  <div className="text-[14px] font-medium leading-5 text-ink">{template.title}</div>
+                  <div className="mt-0.5 text-[11px] text-[#6d6b67]">
+                    {template.duration} min · {template.cost ? `¥${template.cost.toLocaleString()}` : "free"}
+                  </div>
                 </div>
               </button>
             );
@@ -106,22 +129,24 @@ export function AddBlockSheet({
         </div>
 
         <div className="my-5 flex items-center gap-3">
-          <span className="h-px flex-1 bg-line/70" />
-          <span className="text-[9px] tracking-[0.12em] text-faint">OR MAKE IT YOURS</span>
-          <span className="h-px flex-1 bg-line/70" />
+          <span className="h-px flex-1 bg-black/10" />
+          <span className="text-[11px] tracking-[0.1em] text-[#6d6b67]">OR MAKE IT YOURS</span>
+          <span className="h-px flex-1 bg-black/10" />
         </div>
 
         <div className="space-y-3">
-          <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex flex-wrap gap-1.5">
             {(Object.keys(kindMeta) as BlockKind[]).map((key) => (
               <button
                 key={key}
                 onClick={() => setKind(key)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] transition ${
-                  kind === key ? "border-ink/20 bg-ink text-paper" : "border-line text-muted hover:border-ink/20"
+                className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] transition-colors duration-150 ${
+                  kind === key
+                    ? "border-ink bg-ink text-white"
+                    : "border-black/10 bg-white text-[#525252] hover:border-black/20 hover:text-ink"
                 }`}
               >
-                <KindIcon kind={key} size={11} /> {kindMeta[key].label}
+                <KindIcon kind={key} size={12} /> {kindMeta[key].label}
               </button>
             ))}
           </div>
@@ -129,20 +154,21 @@ export function AddBlockSheet({
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="What are you doing?"
-            className="w-full rounded-lg border border-line bg-paper/35 px-3 py-2.5 text-[12px] outline-none placeholder:text-faint focus:border-clay/50 focus:bg-white"
+            className={inputClass}
           />
           <input
             value={place}
             onChange={(event) => setPlace(event.target.value)}
             placeholder="Where? (optional)"
-            className="w-full rounded-lg border border-line bg-paper/35 px-3 py-2.5 text-[12px] outline-none placeholder:text-faint focus:border-clay/50 focus:bg-white"
+            className={inputClass}
           />
           <div className="grid grid-cols-3 gap-2">
             <input
               type="time"
               value={start}
               onChange={(event) => setStart(event.target.value)}
-              className="rounded-lg border border-line bg-paper/35 px-2.5 py-2.5 text-[11px] tabular-nums outline-none focus:border-clay/50 focus:bg-white"
+              className={`${inputClass} px-2 tabular-nums`}
+              aria-label="Start time"
             />
             <input
               type="number"
@@ -150,7 +176,7 @@ export function AddBlockSheet({
               step={15}
               value={duration}
               onChange={(event) => setDuration(Number(event.target.value))}
-              className="rounded-lg border border-line bg-paper/35 px-2.5 py-2.5 text-[11px] tabular-nums outline-none focus:border-clay/50 focus:bg-white"
+              className={`${inputClass} px-2 tabular-nums`}
               aria-label="Duration in minutes"
             />
             <input
@@ -159,7 +185,7 @@ export function AddBlockSheet({
               step={100}
               value={cost}
               onChange={(event) => setCost(Number(event.target.value))}
-              className="rounded-lg border border-line bg-paper/35 px-2.5 py-2.5 text-[11px] tabular-nums outline-none focus:border-clay/50 focus:bg-white"
+              className={`${inputClass} px-2 tabular-nums`}
               aria-label="Cost in yen"
             />
           </div>
@@ -169,7 +195,7 @@ export function AddBlockSheet({
           <button
             onClick={addCustom}
             disabled={!title.trim()}
-            className="flex items-center gap-1.5 rounded-lg bg-ink px-4 py-2.5 text-[11px] font-medium text-paper transition hover:bg-moss disabled:opacity-35"
+            className="flex h-9 items-center gap-1.5 rounded-lg bg-ink px-4 text-[12px] font-medium text-white transition-colors duration-150 hover:bg-[#2c2c2a] disabled:opacity-35"
           >
             <Plus size={13} /> Add block <ArrowRight size={12} />
           </button>

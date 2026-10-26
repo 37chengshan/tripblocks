@@ -5,8 +5,8 @@
   <meta name="google" content="notranslate">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TripBlocks — Demo Workbench</title>
-  <meta name="description" content="A read-only TripBlocks demo: drag the Kansai trip graph, edit blocks locally, and read saved agent conversations. No chat composer, no backend.">
-  <meta name="theme-color" content="#2c2024">
+  <meta name="description" content="A read-only TripBlocks demo: three saved conversations, each with its own editable trip tree, usage, and thinking record. No chat composer, no backend.">
+  <meta name="theme-color" content="#151515">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%232c2024'/%3E%3Crect x='13' y='13' width='16' height='16' fill='%23f1eadf'/%3E%3Crect x='35' y='13' width='16' height='16' fill='%23a94d2c'/%3E%3Crect x='13' y='35' width='38' height='16' fill='%23f1eadf'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="demo.css">
 </head>
@@ -42,38 +42,52 @@
         <h2 id="railTitle">Kansai, slowly</h2>
         <p class="rail-trip-when">06 — 12 Nov 2026</p>
         <p class="rail-trip-where">Kyoto · Nara · Osaka · Uji</p>
+        <p class="rail-trip-session" id="railSession">Draft 01 · Make Day 5 lighter</p>
       </div>
+
+      <section class="rail-sessions" aria-labelledby="sessionsTitle">
+        <div class="rail-section-head">
+          <p class="eyebrow" id="sessionsTitle">Conversations</p>
+          <span>3 saved</span>
+        </div>
+        <div class="session-list" id="sessionList" role="tablist" aria-label="Saved conversations"></div>
+      </section>
 
       <nav class="rail-nav" aria-label="Demo navigation">
         <a class="rail-link is-active" href="#graphViewport" aria-current="true"><span class="rail-index">01</span>Itinerary</a>
-        <a class="rail-link" href="#convList"><span class="rail-index">02</span>Conversations</a>
+        <a class="rail-link" href="#sessionList"><span class="rail-index">02</span>Conversations</a>
         <a class="rail-link" href="#railHealth"><span class="rail-index">03</span>Budget</a>
       </nav>
 
       <section class="rail-health" id="railHealth" aria-labelledby="railHealthTitle">
-        <p class="eyebrow" id="railHealthTitle">Trip health</p>
+        <p class="eyebrow" id="railHealthTitle">Trip health · this draft</p>
         <dl class="rail-stats">
           <div><dt>Days</dt><dd id="railDays">7</dd></div>
-          <div><dt>Blocks</dt><dd id="railBlocks">25</dd></div>
+          <div><dt>Blocks</dt><dd id="railBlocks">24</dd></div>
           <div><dt>Planned</dt><dd id="railSpend">¥0</dd></div>
         </dl>
         <div class="rail-meter" role="img" aria-label="Share of the budget already planned"><span id="railMeter"></span></div>
         <p class="rail-budget" id="railBudget">of ¥260,000 planned budget</p>
         <ul class="rail-checks">
-          <li><i class="dot moss"></i>Local draft saved in this browser</li>
+          <li><i class="dot moss"></i>Each conversation keeps its own local tree</li>
           <li><i class="dot clay"></i>No agent calls from this page</li>
         </ul>
       </section>
 
-      <p class="rail-foot">Demo / read-only agent<br>Drag a node to make the graph yours.</p>
+      <p class="rail-foot">Demo / read-only agent<br>Switch a conversation; the tree follows.</p>
     </aside>
 
-    <section class="graph-panel" aria-labelledby="trip-title">
+    <div class="mobile-tabs" role="tablist" aria-label="Workbench view">
+      <button type="button" class="mobile-tab is-active" data-mobile-view="tree" role="tab" aria-selected="true" aria-controls="graphPanel">Tree</button>
+      <button type="button" class="mobile-tab" data-mobile-view="chat" role="tab" aria-selected="false" aria-controls="conversationsPanel">Conversation</button>
+    </div>
+
+    <section class="graph-panel" id="graphPanel" aria-labelledby="trip-title">
       <div class="graph-toolbar">
         <div class="trip-meta">
-          <p class="eyebrow">Demo workbench / local data</p>
-          <h1 id="trip-title">A slower week in Kansai</h1>
-          <p class="trip-sub">06 — 12 Nov 2026 <span>·</span> 2 travellers <span>·</span> ¥260,000 <span>·</span> 25 blocks</p>
+          <p class="eyebrow" id="tripEyebrow">Saved draft / local data</p>
+          <h1 id="trip-title">Make Day 5 lighter</h1>
+          <p class="trip-sub" id="tripSub">Day 5 · 24 blocks · ends before 21:00</p>
         </div>
         <div class="graph-actions" aria-label="Graph controls">
           <div class="zoom-controls">
@@ -93,40 +107,57 @@
         <span>Click a block to edit</span>
       </div>
 
-      <div class="graph-viewport" id="graphViewport" tabindex="0" aria-label="Interactive trip graph. Drag nodes, scroll to zoom, click a block to edit.">
+      <div class="graph-viewport" id="graphViewport" tabindex="0" aria-label="Interactive trip graph for the active conversation. Drag nodes, scroll to zoom, click a block to edit.">
         <div class="stage" id="graphStage">
           <svg class="edges" id="graphEdges" aria-hidden="true"></svg>
-          <div class="stage-note stage-note--one">ROOT → DAY 01</div>
-          <div class="stage-note stage-note--two">DAY → BLOCK → BLOCK</div>
-          <div class="stage-note stage-note--three">LOCAL / 25 NODES</div>
+          <div class="stage-note stage-note--one" id="stageNoteOne">ROOT → DAY 01</div>
+          <div class="stage-note stage-note--two" id="stageNoteTwo">DAY 01 → DAY 07</div>
+          <div class="stage-note stage-note--three" id="stageNoteThree">LOCAL / 24 NODES</div>
         </div>
-        <div class="viewport-corner" aria-hidden="true"><span>01</span><span>GRAPH VIEW</span></div>
+        <div class="viewport-corner" aria-hidden="true"><span>01</span><span>SESSION GRAPH</span></div>
       </div>
 
       <div class="graph-status">
-        <span><i class="dot moss"></i> Edits stay in this browser</span>
+        <span><i class="dot moss"></i> Edits stay with this conversation</span>
         <span>Click <b>Fit</b> to recentre</span>
         <button type="button" class="text-btn" id="resetGraph">Reset demo</button>
       </div>
     </section>
 
-    <aside class="conversations" aria-labelledby="conversations-title">
+    <aside class="conversations" id="conversationsPanel" aria-labelledby="conversations-title">
       <div class="conv-head">
         <div>
-          <p class="eyebrow">Saved conversations</p>
-          <h2 id="conversations-title">Three moments from the week</h2>
+          <p class="eyebrow">Saved conversation</p>
+          <h2 id="conversations-title">Make Day 5 lighter</h2>
         </div>
         <span class="readonly-badge">Read-only</span>
       </div>
 
-      <div class="conv-demo-badge"><i></i> Demo · read-only conversation</div>
+      <div class="conv-transcript" id="convTranscript" role="tabpanel" tabindex="0" aria-label="Saved conversation for the active session"></div>
 
-      <div class="conv-list" id="convList" role="tablist" aria-label="Saved conversations"></div>
+      <section class="usage-card" id="usageCard" aria-labelledby="usageTitle">
+        <div class="card-head">
+          <p class="eyebrow" id="usageTitle">Run usage</p>
+          <span class="card-tag">saved</span>
+        </div>
+        <dl class="usage-grid" id="usageGrid"></dl>
+      </section>
 
-      <div class="conv-transcript" id="convTranscript" role="tabpanel" tabindex="0"></div>
+      <section class="thinking-card is-open" id="thinkingCard" aria-labelledby="thinkingTitle">
+        <button type="button" class="thinking-toggle" id="thinkingToggle" aria-expanded="true" aria-controls="thinkingBody">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span class="thinking-label" id="thinkingTitle">Thinking record</span>
+          <span class="thinking-summary" id="thinkingSummary">4 steps · 42s</span>
+          <span class="thinking-chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div class="thinking-body" id="thinkingBody">
+          <ol class="thinking-list" id="thinkingList"></ol>
+        </div>
+      </section>
+
+      <p class="readonly-line panel-note">Read-only · no composer · no message can be sent.</p>
 
       <div class="conv-footer">
-        <p>No message composer. These are saved records from the full app; the agent is not called from this page.</p>
         <a class="full-link" href="https://github.com/37chengshan/tripblocks#run" target="_blank" rel="noreferrer">Open the full workbench <span aria-hidden="true">↗</span></a>
         <span class="conv-run">or run <code>npm run dev:all</code> locally</span>
       </div>

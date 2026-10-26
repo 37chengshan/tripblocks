@@ -6,7 +6,7 @@
 - **GitHub**：https://github.com/37chengshan/tripblocks
 - **提交 Issue**：https://github.com/modelstudioai/modelstudioai.github.io/issues/203
 - **Demo 视频**：https://github.com/37chengshan/tripblocks/raw/main/docs/demo/tripblocks-demo.mp4
-- **Editorial intro**：`site/index.html``https://37chengshan.github.io/tripblocks/`
+- **Editorial intro**：`site/index.html`（部署后 `https://37chengshan.github.io/tripblocks/`；仓库包含 Pages workflow，本分支尚未 push）
 - **Demo workbench**：`site/demo.html`（只读对话 + 可编辑本地行程图）
 - **Architecture**：`site/architecture.html`（从实际仓库代码绘制）
 - **演示**：`npm install && npm run dev:all`，打开 `http://127.0.0.1:5173`

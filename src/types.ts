@@ -57,3 +57,47 @@ export type Suggestion = {
   cost: number;
   note: string;
 };
+
+/** How a conversation is stored. `saved` and `local` are always read-only samples. */
+export type SessionStatus = "live" | "saved" | "local";
+
+export type SessionUsage = {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCostJpy: number;
+  runtimeMs: number;
+  contextUsed: number;
+  contextMax: number;
+};
+
+export type ThinkingStatus = "active" | "done" | "pending";
+
+export type ThinkingStep = {
+  id: string;
+  label: string;
+  detail: string;
+  status: ThinkingStatus;
+};
+
+/**
+ * A conversation owns its own tree. Nothing about the centre canvas, the
+ * transcript, usage or the thinking stream is shared between sessions.
+ */
+export type Session = {
+  id: string;
+  title: string;
+  /** Short agent/context label shown under the title. */
+  meta: string;
+  /** Relative time label, e.g. "2m ago". */
+  time: string;
+  status: SessionStatus;
+  /** Seed transcripts are fictional saved examples, never live calls. */
+  sample?: boolean;
+  /** A locally saved draft with no live agent behind it. */
+  draft?: boolean;
+  trip: Trip;
+  messages: ChatMessage[];
+  usage: SessionUsage;
+  thinking: ThinkingStep[];
+};
