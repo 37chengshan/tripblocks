@@ -55,8 +55,10 @@ type BlockFlowNode = Node<BlockNodeData, "block">;
 type DayFlowNode = Node<DayNodeData, "day">;
 type AppNode = TripFlowNode | BlockFlowNode | DayFlowNode;
 type CanvasEdge = Edge & {
-  pathOptions?: { borderRadius?: number; offset?: number; curvature?: number };
+  pathOptions?: { borderRadius?: number; offset?: number };
 };
+
+const hiddenHandle = { opacity: 0 } as const;
 
 const statusDot: Record<"moss" | "clay" | "sun", string> = {
   moss: "#53624d",
@@ -101,7 +103,7 @@ const TripNodeView = memo(function TripNodeView({ data }: NodeProps<TripFlowNode
         </div>
       </div>
 
-      <Handle type="source" position={Position.Right} isConnectable={false} />
+      <Handle type="source" position={Position.Right} id="root-out" isConnectable={false} style={hiddenHandle} />
     </div>
   );
 });
@@ -166,8 +168,10 @@ const DayNodeView = memo(function DayNodeView({ data }: NodeProps<DayFlowNode>) 
         <span>{cost ? formatYen(cost) : "free"}</span>
       </div>
 
-      <Handle type="target" position={Position.Left} isConnectable={false} />
-      <Handle type="source" position={Position.Right} isConnectable={false} />
+      <Handle type="target" position={Position.Left} id="day-left" isConnectable={false} style={hiddenHandle} />
+      <Handle type="source" position={Position.Right} id="day-right" isConnectable={false} style={hiddenHandle} />
+      <Handle type="target" position={Position.Top} id="day-in" isConnectable={false} style={hiddenHandle} />
+      <Handle type="source" position={Position.Bottom} id="day-out" isConnectable={false} style={hiddenHandle} />
     </div>
   );
 });
@@ -220,8 +224,8 @@ const BlockNodeView = memo(function BlockNodeView({ data }: NodeProps<BlockFlowN
         </span>
       </div>
 
-      <Handle type="target" position={Position.Left} isConnectable={false} />
-      <Handle type="source" position={Position.Right} isConnectable={false} />
+      <Handle type="target" position={Position.Left} id="block-left" isConnectable={false} style={hiddenHandle} />
+      <Handle type="source" position={Position.Right} id="block-right" isConnectable={false} style={hiddenHandle} />
     </div>
   );
 });
@@ -377,34 +381,65 @@ function buildNodes(
   return nodes;
 }
 
+function orderedForEdges(trip: Trip, dayBlocks: Block[]): Block[] {
+  return dayBlocks
+    .map((block, index) => ({ block, x: trip.positions?.[block.id]?.x ?? BLOCK_X + index * BLOCK_PITCH }))
+    .sort((a, b) => a.x - b.x)
+    .map((entry) => entry.block);
+}
+
 function buildEdges(trip: Trip): CanvasEdge[] {
   const byDay = blocksByDay(trip);
   const edges: CanvasEdge[] = [];
 
-  for (const day of trip.days) {
-    const blocks = orderedBlocks(byDay.get(day.id) ?? []);
+  trip.days.forEach((day, dayIndex) => {
+    const blocks = orderedForEdges(trip, orderedBlocks(byDay.get(day.id) ?? []));
+    const previousDay = dayIndex > 0 ? trip.days[dayIndex - 1] : null;
 
-    edges.push({
-      id: `branch-${day.id}`,
-      source: "trip-root",
-      target: `day-${day.id}`,
-      type: "default",
-      pathOptions: { curvature: 0.32 },
-      style: { stroke: "#d9d4c7", strokeWidth: 1.1 },
-      selectable: false,
-      focusable: false,
-      zIndex: 0,
-    });
+    edges.push(
+      previousDay
+        ? {
+            id: `chain-day-${previousDay.id}-${day.id}`,
+            source: `day-${previousDay.id}`,
+            sourceHandle: "day-out",
+            target: `day-${day.id}`,
+            targetHandle: "day-in",
+            type: "smoothstep",
+            pathOptions: { borderRadius: 16, offset: 16 },
+            style: { stroke: "#b99d85", strokeWidth: 1.55 },
+            markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: "#a98d75" },
+            selectable: false,
+            focusable: false,
+            zIndex: 0,
+          }
+        : {
+            id: "chain-root-day-1",
+            source: "trip-root",
+            sourceHandle: "root-out",
+            target: `day-${day.id}`,
+            targetHandle: "day-left",
+            type: "smoothstep",
+            pathOptions: { borderRadius: 18, offset: 18 },
+            style: { stroke: "#bfa68d", strokeWidth: 1.5 },
+            markerEnd: { type: MarkerType.ArrowClosed, width: 10, height: 10, color: "#a98d75" },
+            selectable: false,
+            focusable: false,
+            zIndex: 0,
+          },
+    );
 
-    if (blocks.length === 0) continue;
+    if (blocks.length === 0) return;
 
     edges.push({
       id: `day-entry-${day.id}`,
       source: `day-${day.id}`,
+      sourceHandle: "day-right",
       target: blocks[0].id,
-      type: "default",
-      pathOptions: { curvature: 0.2 },
-      style: { stroke: "#d7c9bd", strokeWidth: 1.1 },
+      targetHandle: "block-left",
+      type: "smoothstep",
+      pathOptions: { borderRadius: 14, offset: 14 },
+      style: { stroke: "#c8b7a1", strokeWidth: 1.4 },
+      markerEnd: { type: MarkerType.ArrowClosed, width: 9, height: 9, color: "#ad9a83" },
       selectable: false,
       focusable: false,
       zIndex: 0,
@@ -416,17 +451,19 @@ function buildEdges(trip: Trip): CanvasEdge[] {
       edges.push({
         id: `seq-${block.id}-${next.id}`,
         source: block.id,
+        sourceHandle: "block-right",
         target: next.id,
+        targetHandle: "block-left",
         type: "smoothstep",
         pathOptions: { borderRadius: 14, offset: 14 },
-        style: { stroke: "#d9a58f", strokeWidth: 1.25 },
-        markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12, color: "#cd927c" },
+        style: { stroke: "#c78d75", strokeWidth: 1.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, width: 9, height: 9, color: "#b77b63" },
         selectable: false,
         focusable: false,
         zIndex: 0,
       });
     });
-  }
+  });
 
   return edges;
 }
@@ -535,7 +572,7 @@ export function CanvasBoard({
           </div>
           <h2 className="mt-1.5 font-display text-[28px] leading-none">Move a node. The week changes.</h2>
           <p className="mt-1.5 text-[10.5px] leading-relaxed text-muted">
-            The trip branches into days, then into blocks. Drag a card, click to edit — every change lands here.
+            Day 1 runs into Day 2, and each day runs block by block. Drag a card, click to edit — every change lands here.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pb-0.5 text-[9.5px] text-muted">

@@ -1,119 +1,159 @@
 # TripBlocks
 
-> A calmer way to plan a trip — one block at a time.
-> 2026 飞猪 AI 旅行创新大赛参赛作品
+**A calmer way to plan a trip — the week as a live graph, not a generated itinerary.**
 
-![TripBlocks home](docs/screenshots/home.png)
+TripBlocks is a local-first travel workspace. The plan is a live node tree: the trip at the root, the week's days chained down the canvas, and each day's transport, stays, food and experiences running left to right in time order. Drag a block and its day, start time and order change; cost and route follow. The traveler and an AI agent work on the same graph: Wander can propose a card, you accept, edit or discard it.
 
-[26 秒 Demo 视频](docs/demo/tripblocks-demo.mp4)
+Real hotel and attraction inventory comes from **FlyAI / Fliggy**, with prices, images and booking links; any result can become a block in a day.
 
-## 站点 / Demo / 架构
+Built for the **2026 飞猪 AI 旅行创新大赛**.
 
-- **Editorial intro**：`site/index.html` — Tana 式编辑排版，所有视觉由内联 SVG / CSS 绘制，零照片。
-- **Demo workbench**：`site/demo.html` — 可拖拽的 Kansai 行程图、节点编辑、三组只读 Agent 对话；没有聊天输入框，不调用模型。
-- **Architecture map**：`site/architecture.html` — 从仓库实际代码绘制的交互式架构图（Archify-style）。
-- **GitHub Pages**：`.github/workflows/pages.yml` 将 `site/` 发布为 Pages。部署地址： `https://37chengshan.github.io/tripblocks/`、`/demo.html`、`/architecture.html`。
+[Live landing](https://37chengshan.github.io/tripblocks/) ·
+[Demo workbench](https://37chengshan.github.io/tripblocks/demo.html) ·
+[Architecture map](https://37chengshan.github.io/tripblocks/architecture.html) ·
+[25 s demo video](docs/demo/tripblocks-demo.mp4) ·
+[Competition entry](https://github.com/modelstudioai/modelstudioai.github.io/issues/203)
 
-TripBlocks 是一个模块化的旅行计划台：把交通、住宿、体验、吃饭和留白做成可拖拽的「块」，让行程从一张待办清单变成可以呼吸的周计划。右侧的 **Wander** 接阿里云百炼 Managed Agent，实时读取当前计划；真正的酒店与景点库存由 **FlyAI / 飞猪** 提供。
+![TripBlocks workbench: itinerary sidebar, live node graph, and the Wander agent](docs/screenshots/canvas.png)
 
-## 核心体验
+## The thesis
 
-- **Block board** — 7 天横向计划板，跨天拖拽，块内编辑时间、地点、预算和备注。
-- **Live FlyAI inventory** — 一键打开真实酒店 / 景点库存，含图片、价格、评分、飞猪预订链接；可直接加入某一天。
-- **Wander** — 接 Managed Agent 的对话伙伴，读取完整行程上下文，给出「让 Day 5 轻一点」这类具体建议；建议块可一键加入计划。
-- **Route map & budget** — 路线可视化、每日消费构成、预算余量、已知冲突提示。
-- **Local-first** — 行程保存在本地；不登录也能完整编辑；AI 不可用时仍有确定性的本地草稿回复。
+An itinerary is not a document. It is a set of coupled decisions: move one afternoon and the hotel night, the budget and the next morning all move with it. Most AI planners hide that coupling behind a chat transcript and a wall of generated text. TripBlocks keeps the plan itself as the interface — visible, editable and grounded in real inventory.
 
-## 运行
+## What you can do
+
+- **Plan on a living canvas.** Itinerary, route and budget in the left sidebar; a trip → day → block graph in the center; Wander on the right. Add, select, drag and edit without leaving the canvas.
+- **Drag means reschedule.** Crossing a day lane rewrites `dayId`, start time and order; dropping inside a day reorders and re-times. Node positions are layout state, not the schedule.
+- **Ask an agent that sees the whole plan.** Wander receives a compacted itinerary — days, places, times, costs, notes — and answers briefly. It may return one suggested block. Suggestions arrive as cards; nothing enters the plan until you add it.
+- **Ground it in real inventory.** From Board view, Live options searches Fliggy through FlyAI for stays and things to do, with images, prices, addresses and booking links. Add a result to any day.
+- **Keep the week honest.** Route map, daily spend, remaining budget and pace are visible in the same workspace, not a separate report.
+- **Stay local-first.** The plan and canvas positions persist in `localStorage`; export is a JSON file. No sign-in to edit, no hosted plan state.
+
+## See it
+
+| Live FlyAI inventory | Demo workbench |
+|---|---|
+| ![FlyAI stays with prices and booking links](docs/screenshots/flyai-stays.png) | ![Demo workbench with the Kansai graph and saved conversations](docs/screenshots/demo.png) |
+| *Real Fliggy stays, prices and booking links, addable to a day.* | *The full Kansai graph and saved conversations. No composer.* |
+
+| Landing | Architecture |
+|---|---|
+| ![Editorial TripBlocks landing page](docs/screenshots/landing.png) | ![Interactive architecture map](docs/screenshots/architecture.png) |
+| *An editorial field note, drawn in SVG and CSS.* | *The real request paths, node by node.* |
+
+The three public pages are deliberately separate:
+
+- **Landing** — the product argument and a way into the workbench.
+- **Demo workbench** — a static version of the Kansai plan with read-only conversations. Drag and edit nodes locally; two saved Managed Agent conversations and one saved local draft; **no composer, no model, no inventory calls**.
+- **Architecture map** — an interactive map of the actual request paths.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  UI["React workbench<br/>canvas · inspector · route · budget"]
+  Bridge["Local Node bridge<br/>server.mjs"]
+  Agent["Bailian Managed Agent<br/>managed-agent session run"]
+  Vault["Bailian Vault"]
+  FlyAI["FlyAI CLI"]
+  Fliggy["Fliggy inventory"]
+  Local["Local model<br/>optional fallback"]
+  Store[("localStorage<br/>plan · positions")]
+
+  UI -->|"POST /api/agent"| Bridge
+  UI -->|"GET /api/flyai"| Bridge
+  Bridge -->|"one run per message"| Agent
+  Agent --> Vault
+  Bridge -->|"search-hotel / search-poi"| FlyAI
+  FlyAI --> Fliggy
+  Bridge -.->|"AGENT_FALLBACK=on"| Local
+  UI --- Store
+```
+
+The bridge is deliberately small. `/api/agent` sends the compacted trip and the user message in a single `bl managed-agent session run` call — a 55 s browser timeout and a 52 s CLI timeout, no polling, no background loop. `/api/flyai` shells out to the official FlyAI CLI and caches results for 10 minutes. If the Managed Agent call fails, the bridge can retry a local OpenAI-compatible model (`LOCAL_MODEL_BASE_URL`, default `http://127.0.0.1:10100/v1`); set `AGENT_FALLBACK=off` to disable the retry and return a 503.
+
+Replies carry `source: managed-agent` or `source: local`, and the UI labels them. If no model is reachable at all, the frontend uses a deterministic draft and marks it local — it never presents canned text as a model answer. API keys live in the Bailian CLI/Vault or the server environment, never in the page.
+
+## Run locally
+
+Requirements: **Node 20.19+ or 22.12+** and npm. The live agent and FlyAI inventory need a funded Bailian account and a FlyAI key; the public demo needs neither.
 
 ```bash
 npm install
 npm run dev:all
-# Web: http://127.0.0.1:5173
-# API: http://127.0.0.1:8787
 ```
 
-也可以分开启动：
+- Web: `http://127.0.0.1:5173`
+- API bridge: `http://127.0.0.1:8787`
+
+`npm run dev` starts Vite alone. The canvas still works, but the agent falls back to the local draft and inventory stays unavailable.
+
+### Credentials
 
 ```bash
-npm run server
-npm run dev
-```
+# Bailian Managed Agent — bailian-cli is already a dev dependency
+npx bl auth login --console
 
-### FlyAI
-
-FlyAI CLI 已作为项目依赖安装（`@fly-ai/flyai-cli`）。配置一次 API Key：
-
-```bash
+# FlyAI / Fliggy inventory
 npx flyai config set FLYAI_API_KEY "your-key"
 ```
 
-`server.mjs` 会优先使用 `node_modules/.bin/flyai`，因此不需要全局安装。没有 Key 时 CLI 也可能返回试用结果；正式演示建议配置。
+Agent definitions live in `agent/agents.yaml` (`admin`, environment `dev-2`, Vault `admin`). The bridge invokes it with `--file agent/agents.yaml`. Keep real credentials in the CLI, Vault or environment, never in this repository or the browser.
 
-官方 FlyAI Skill：
-
-```bash
-npx skills add alibaba-flyai/flyai-skill
-```
-
-### Managed Agent
-
-浏览器只访问本地 `/api/agent`，密钥和 CLI 调用留在服务端。服务端通过 `bl managed-agent session run` 使用 `agent/agents.yaml` 中的 Agent 配置；`agent/agents.state.json` 记录了已导入的远程 Agent / Environment / Vault 资源。
-
-首次使用需要：
-
-```bash
-npm i -g bailian-cli
-bl auth login --console
-```
-
-然后确保 `agent/agents.yaml` 指向你有权限的 Agent 与 Environment。当前仓库已接入比赛用的 Managed Agent 与 Vault；如果你复制到别的账号，请重新 `bl managed-agent state import` 或按 `bl managed-agent init` 新建。
-
-> **费用提示**：`/api/agent` 仅在用户主动发送消息时调用一次，没有轮询。Managed Agent 的会话运行时费只在 running 时计费。Agent 不可用时，服务端会回退到本地 OCX 的 `intern/qwen3.8-27b`（不是百炼账单里的 AutoModel）；如果不想使用任何 fallback，启动时设置 `AGENT_FALLBACK=off`，前端仍会使用不调用模型的本地草稿。
-
-### 可选环境变量
-
-| 变量 | 默认 | 说明 |
+| Variable | Default | Purpose |
 |---|---|---|
-| `PORT` | `8787` | API 端口 |
-| `BL_BIN` | `bl` | 百炼 CLI |
-| `FLYAI_BIN` | `node_modules/.bin/flyai` | FlyAI CLI |
-| `FLYAI_API_KEY` | `flyai config` | FlyAI 密钥（推荐用 CLI 配置） |
-| `AGENT_FALLBACK` | `on` | 设为 `off` 时禁用本地模型 fallback |
-| `LOCAL_MODEL` | `intern/qwen3.8-27b` | fallback 模型 |
-| `LOCAL_MODEL_BASE_URL` | `http://127.0.0.1:10100/v1` | fallback 的 OpenAI 兼容端点 |
+| `PORT` | `8787` | Bridge port |
+| `BL_BIN` | local `.bin/bl`, else `bl` | Bailian CLI |
+| `FLYAI_BIN` | `node_modules/.bin/flyai`, else `flyai` | FlyAI CLI |
+| `AGENT_FALLBACK` | `on` | Set `off` to disable the local-model retry |
+| `LOCAL_MODEL_BASE_URL` | `http://127.0.0.1:10100/v1` | Fallback OpenAI-compatible endpoint |
+| `LOCAL_MODEL` | `intern/qwen3.8-27b` | Fallback model |
+| `DASHSCOPE_API_KEY`, `BAILIAN_BASE_URL` | — | Read by `agent/agents.yaml` when set |
 
-## 结构
+## Project map
 
 ```text
 src/
-  App.tsx                 应用状态、拖拽、导出、Live FlyAI 开关
+  App.tsx                 plan state, views, agent and FlyAI wiring
   components/
-    TripBoard.tsx         7 天横向 board
-    BlockCard.tsx         sortable block
-    Inspector.tsx         块详情编辑
-    AddBlockSheet.tsx     手动添加块
-    FlyAISheet.tsx        FlyAI 实时酒店/景点
-    Companion.tsx         Wander + 建议卡 + 本地草稿
-    RouteMap.tsx          路线地图
-    BudgetView.tsx        预算视图
-server.mjs                /api/agent + /api/flyai + 静态预览
-agent/                    Managed Agent 配置与状态
-docs/COMPETITION.md       比赛提交说明
+    CanvasBoard.tsx       React Flow canvas; drag → day, start, order
+    TripBoard.tsx         alternate day board with Live options
+    Inspector.tsx         block editor
+    Companion.tsx         Wander conversation UI
+    FlyAISheet.tsx        live stay / POI inventory
+    RouteMap.tsx          route view
+    BudgetView.tsx        spend view
+  lib/agent.ts            /api/agent client + labeled local draft
+  data.ts                 seeded 7-day Kansai trip
+server.mjs                local bridge and production static server
+agent/                    Managed Agent config and resource state
+site/                     Pages bundle: landing, demo, architecture
+docs/COMPETITION.md       requirement mapping and 3-minute demo script
+docs/screenshots/         README images
+docs/demo/                25.6 s demo video
+.github/workflows/        Pages deployment
 ```
 
-## 设计
+## Competition mapping
 
-暖白纸张、发丝边、陶土色强调，不依赖大面积渐变或玻璃拟态。计划本身是主角；AI 是旁边安静的第二意见，而不是遮住内容的聊天窗。Intro 采用编辑式排版与代码绘制的路线/节点艺术；Demo 刻意与 Intro 区分，是更密、更工具化的本地工作台。
+| Requirement | Implementation |
+|---|---|
+| Bailian Managed Agent | `server.mjs` calls `bl managed-agent session run`; config in `agent/agents.yaml` |
+| Vault binding | Agent bound to Vault `admin`; API keys stay server-side |
+| FlyAI Skill / CLI | Official `@fly-ai/flyai-cli`; `/api/flyai` runs `search-hotel` and `search-poi` |
+| Real hotel / attraction inventory | Live options sheet with images, prices, addresses and Fliggy links |
+| Reproducible product | Public landing, demo and architecture pages; 25.6 s video; `npm install && npm run dev:all` |
+| Competition submission | [issue #203](https://github.com/modelstudioai/modelstudioai.github.io/issues/203) |
 
-## 当前状态
+**Live status:** FlyAI is live. The Managed Agent runs live once the Bailian account has credit and an API key is created. The public Pages build stays static by design.
 
-- **Managed Agent**：已接入，充值后可用；`server.mjs` 通过 `bl managed-agent session run` 调用，Vault 绑定，前端不接触密钥。
-- **FlyAI**：已可用；官方 `@fly-ai/flyai-cli`，真实酒店/景点、图片、价格与飞猪链接。
-- **Video**：20–30 秒，1920×1080，`docs/demo/tripblocks-demo.mp4`。
+## Limits
 
-## 已知限制
+- **The Pages demo is a static snapshot.** It has no chat backend or composer and makes no model or inventory calls. The full loop needs local Node plus Bailian/FlyAI credentials.
+- **Currency is approximate.** FlyAI prices are CNY; adding a priced result to the JPY plan converts at ≈ ¥20 JPY / ¥1 CNY and writes the estimate into the block note.
+- **No booking execution.** Payments, ticketing, multi-user sync and live flight availability are not implemented.
+- **The agent is single-turn.** It proposes at most one block per reply and never writes to the plan without confirmation.
 
-- Live FlyAI 价格以 CNY 显示；加入 JPY 计划时按 `≈ ¥20 JPY / ¥1 CNY` 估算，并在块备注中标注。
-- Managed Agent 已接入并在充值后可用；如果账号权限/额度暂时不可用，服务端可按配置回退到本地模型，前端也会明确显示本地草稿，而不是伪造 AI 结果。
-- 这是比赛 Demo，不包含支付、真实订房/出票或多人协同。
+## License
+
+No open-source license is declared yet; the source is published for the competition and review. Add a license before reuse. Third-party names, inventory imagery and booking links belong to their respective owners.

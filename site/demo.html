@@ -1,7 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" translate="no" class="notranslate">
 <head>
   <meta charset="utf-8">
+  <meta name="google" content="notranslate">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TripBlocks — Demo Workbench</title>
   <meta name="description" content="A read-only TripBlocks demo: drag the Kansai trip graph, edit blocks locally, and read saved agent conversations. No chat composer, no backend.">
@@ -9,7 +10,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%232c2024'/%3E%3Crect x='13' y='13' width='16' height='16' fill='%23f1eadf'/%3E%3Crect x='35' y='13' width='16' height='16' fill='%23a94d2c'/%3E%3Crect x='13' y='35' width='38' height='16' fill='%23f1eadf'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="demo.css">
 </head>
-<body>
+<body class="notranslate">
   <a class="skip-link" href="#workbench">Skip to the workbench</a>
 
   <header class="demo-header">
@@ -30,6 +31,43 @@
   </header>
 
   <main class="workbench" id="workbench">
+    <aside class="rail" aria-labelledby="railTitle">
+      <a class="rail-brand" href="index.html" aria-label="TripBlocks landing">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="rail-brand-text"><strong>TripBlocks</strong><em>workbench</em></span>
+      </a>
+
+      <div class="rail-trip">
+        <p class="eyebrow">Active trip</p>
+        <h2 id="railTitle">Kansai, slowly</h2>
+        <p class="rail-trip-when">06 — 12 Nov 2026</p>
+        <p class="rail-trip-where">Kyoto · Nara · Osaka · Uji</p>
+      </div>
+
+      <nav class="rail-nav" aria-label="Demo navigation">
+        <a class="rail-link is-active" href="#graphViewport" aria-current="true"><span class="rail-index">01</span>Itinerary</a>
+        <a class="rail-link" href="#convList"><span class="rail-index">02</span>Conversations</a>
+        <a class="rail-link" href="#railHealth"><span class="rail-index">03</span>Budget</a>
+      </nav>
+
+      <section class="rail-health" id="railHealth" aria-labelledby="railHealthTitle">
+        <p class="eyebrow" id="railHealthTitle">Trip health</p>
+        <dl class="rail-stats">
+          <div><dt>Days</dt><dd id="railDays">7</dd></div>
+          <div><dt>Blocks</dt><dd id="railBlocks">25</dd></div>
+          <div><dt>Planned</dt><dd id="railSpend">¥0</dd></div>
+        </dl>
+        <div class="rail-meter" role="img" aria-label="Share of the budget already planned"><span id="railMeter"></span></div>
+        <p class="rail-budget" id="railBudget">of ¥260,000 planned budget</p>
+        <ul class="rail-checks">
+          <li><i class="dot moss"></i>Local draft saved in this browser</li>
+          <li><i class="dot clay"></i>No agent calls from this page</li>
+        </ul>
+      </section>
+
+      <p class="rail-foot">Demo / read-only agent<br>Drag a node to make the graph yours.</p>
+    </aside>
+
     <section class="graph-panel" aria-labelledby="trip-title">
       <div class="graph-toolbar">
         <div class="trip-meta">
@@ -58,8 +96,8 @@
       <div class="graph-viewport" id="graphViewport" tabindex="0" aria-label="Interactive trip graph. Drag nodes, scroll to zoom, click a block to edit.">
         <div class="stage" id="graphStage">
           <svg class="edges" id="graphEdges" aria-hidden="true"></svg>
-          <div class="stage-note stage-note--one">ROOT / KANSAI</div>
-          <div class="stage-note stage-note--two">DAY → BLOCK</div>
+          <div class="stage-note stage-note--one">ROOT → DAY 01</div>
+          <div class="stage-note stage-note--two">DAY → BLOCK → BLOCK</div>
           <div class="stage-note stage-note--three">LOCAL / 25 NODES</div>
         </div>
         <div class="viewport-corner" aria-hidden="true"><span>01</span><span>GRAPH VIEW</span></div>

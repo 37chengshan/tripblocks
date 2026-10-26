@@ -5,6 +5,13 @@
   const STORE_KEY = "tripblocks:demo:v1";
   const STAGE_MIN_W = 1380;
   const STAGE_MIN_H = 840;
+  const DAY_X = 340;
+  const DAY_Y = 48;
+  const DAY_ROW = 108;
+  const BLOCK_X = 600;
+  const BLOCK_PITCH = 190;
+  const ROOT = { x: 24, y: 29 };
+  const BUDGET = 260000;
   const SIZES = {
     root: { w: 230, h: 110 },
     day: { w: 200, h: 72 },
@@ -131,8 +138,8 @@
   function parseTrip() {
     const days = seedDays.map((day, index) => ({
       ...day,
-      x: 340,
-      y: 48 + index * 108,
+      x: DAY_X,
+      y: DAY_Y + index * DAY_ROW,
       w: SIZES.day.w,
       h: SIZES.day.h,
     }));
@@ -143,7 +150,7 @@
       const day = days[block.dayId - 1];
       return {
         ...block,
-        x: 640 + index * 176,
+        x: BLOCK_X + index * BLOCK_PITCH,
         y: day.y,
         w: SIZES.block.w,
         h: SIZES.block.h,
@@ -152,7 +159,7 @@
     return {
       days,
       blocks,
-      root: { x: 40, y: 330, w: SIZES.root.w, h: SIZES.root.h },
+      root: { ...ROOT, w: SIZES.root.w, h: SIZES.root.h },
     };
   }
 
@@ -173,17 +180,20 @@
         const seed = seedDays.find((item) => item.id === day.id) || seedDays[0];
         return {
           ...seed,
-          x: Number.isFinite(day.x) ? day.x : 340,
-          y: Number.isFinite(day.y) ? day.y : 48 + (seed.id - 1) * 108,
+          x: Number.isFinite(day.x) ? day.x : DAY_X,
+          y: Number.isFinite(day.y) ? day.y : DAY_Y + (seed.id - 1) * DAY_ROW,
           w: SIZES.day.w,
           h: SIZES.day.h,
         };
       });
+      const perDay = new Map();
       const blocks = parsed.blocks
         .filter((block) => block && block.id && block.dayId)
-        .map((block, index) => {
+        .map((block) => {
           const day = days.find((item) => item.id === Number(block.dayId)) || days[0];
-          const fallback = 640 + (index % 4) * 176;
+          const order = perDay.get(day.id) || 0;
+          perDay.set(day.id, order + 1);
+          const fallback = BLOCK_X + order * BLOCK_PITCH;
           return {
             id: String(block.id),
             dayId: Number(block.dayId),
@@ -200,7 +210,7 @@
             h: SIZES.block.h,
           };
         });
-      return { version: 1, days, blocks, root: { x: 40, y: 330, w: SIZES.root.w, h: SIZES.root.h } };
+      return { version: 1, days, blocks, root: { ...ROOT, w: SIZES.root.w, h: SIZES.root.h } };
     } catch {
       return seedState();
     }
@@ -253,8 +263,9 @@
     if (!rect.width || !rect.height) return;
     const padding = 42;
     scale = clamp(Math.min((rect.width - padding) / stageW, (rect.height - padding) / stageH), 0.34, 1.12);
-    panX = (rect.width - stageW * scale) / 2;
-    panY = (rect.height - stageH * scale) / 2;
+    const compact = rect.width < 760;
+    panX = Math.max(12, compact ? 12 : (rect.width - stageW * scale) / 2);
+    panY = Math.max(12, compact ? 12 : (rect.height - stageH * scale) / 2);
     applyTransform();
     hasFitted = true;
   }
@@ -283,10 +294,11 @@
     return state.blocks.filter((block) => block.dayId === dayId).length;
   }
 
-  function createEdge(d, extraClass = "") {
+  function createEdge(d, extraClass = "", withArrow = false) {
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", d);
     if (extraClass) path.setAttribute("class", extraClass);
+    if (withArrow) path.setAttribute("marker-end", "url(#edgeArrow)");
     edgesSvg.appendChild(path);
   }
 
@@ -297,21 +309,60 @@
     const forward = to.x >= from.x;
     const startX = forward ? fromRight : from.x;
     const endX = forward ? to.x : to.x + to.w;
-    const bend = Math.max(58, Math.abs(endX - startX) * 0.48);
+    const bend = clamp(Math.abs(endX - startX) * 0.48, 16, 96);
     const c1 = forward ? startX + bend : startX - bend;
     const c2 = forward ? endX - bend : endX + bend;
     return `M ${startX} ${fromCenterY} C ${c1} ${fromCenterY}, ${c2} ${toCenterY}, ${endX} ${toCenterY}`;
   }
 
+  function edgeDown(from, to) {
+    const x1 = from.x + from.w / 2;
+    const y1 = from.y + from.h;
+    const x2 = to.x + to.w / 2;
+    const y2 = to.y;
+    const bend = clamp((y2 - y1) / 2, 14, 42);
+    return `M ${x1} ${y1} C ${x1} ${y1 + bend}, ${x2} ${y2 - bend}, ${x2} ${y2}`;
+  }
+
+  function blocksOnDay(dayId) {
+    return state.blocks.filter((block) => block.dayId === dayId).sort((a, b) => a.x - b.x);
+  }
+
   function renderEdges() {
     edgesSvg.replaceChildren();
+
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    defs.innerHTML =
+      '<marker id="edgeArrow" viewBox="0 0 10 10" refX="8.4" refY="5" markerWidth="6.4" markerHeight="6.4" orient="auto" markerUnits="strokeWidth"><path d="M1.5 1.6 L8.4 5 L1.5 8.4" fill="none" stroke="#a34a2a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>';
+    edgesSvg.appendChild(defs);
+
     const selected = state.blocks.find((block) => block.id === selectedId);
-    for (const day of state.days) {
-      createEdge(edgeBetween(state.root, day), selected && selected.dayId === day.id ? "edge--root edge--active" : "edge--root");
-      for (const block of state.blocks.filter((item) => item.dayId === day.id)) {
-        createEdge(edgeBetween(day, block), block.id === selectedId ? "edge--day edge--active" : "edge--day");
-      }
-    }
+    const days = [...state.days].sort((a, b) => a.id - b.id);
+
+    days.forEach((day, index) => {
+      const dayActive = Boolean(selected && selected.dayId === day.id);
+      const fromPrevious = index > 0;
+      createEdge(
+        fromPrevious ? edgeDown(days[index - 1], day) : edgeBetween(state.root, day),
+        dayActive ? "edge--chain edge--active" : "edge--chain",
+        true,
+      );
+
+      const blocks = blocksOnDay(day.id);
+      if (!blocks.length) return;
+
+      createEdge(edgeBetween(day, blocks[0]), dayActive ? "edge--day edge--active" : "edge--day", true);
+
+      blocks.forEach((block, position) => {
+        const next = blocks[position + 1];
+        if (!next) return;
+        createEdge(
+          edgeBetween(block, next),
+          block.id === selectedId ? "edge--seq edge--active" : "edge--seq",
+          true,
+        );
+      });
+    });
   }
 
   function nodeShell(className, node, label) {
@@ -389,7 +440,7 @@
     root.innerHTML = `
       <span class="root-kicker">Root / trip</span>
       <div class="root-title">A slower week<br>in Kansai</div>
-      <div class="root-meta"><span>7 days</span><span>${state.blocks.length} blocks</span><span>${formatYen(260000)}</span></div>
+      <div class="root-meta"><span>7 days</span><span>${state.blocks.length} blocks</span><span>${formatYen(BUDGET)}</span></div>
     `;
     stage.appendChild(root);
 
@@ -435,8 +486,20 @@
     renderEdges();
   }
 
+  function updateRail() {
+    const spent = state.blocks.reduce((sum, block) => sum + Number(block.cost || 0), 0);
+    const share = clamp((spent / BUDGET) * 100, 0, 100);
+    $("#railDays").textContent = String(state.days.length);
+    $("#railBlocks").textContent = String(state.blocks.length);
+    $("#railSpend").textContent = formatYen(spent);
+    $("#railMeter").style.width = `${share.toFixed(1)}%`;
+    $("#railBudget").textContent = `of ${formatYen(BUDGET)} planned budget · ${Math.round(share)}%`;
+    $(".rail-meter").setAttribute("aria-label", `${formatYen(spent)} planned of ${formatYen(BUDGET)}`);
+  }
+
   function render() {
     renderNodes();
+    updateRail();
     updateStageSize();
     if (!hasFitted) requestAnimationFrame(fitGraph);
   }
@@ -483,7 +546,7 @@
   function nextPosition(dayId) {
     const day = state.days.find((item) => item.id === Number(dayId)) || state.days[0];
     const count = dayCount(day.id);
-    return { x: day.x + 300 + count * 176, y: day.y };
+    return { x: day.x + (BLOCK_X - DAY_X) + count * BLOCK_PITCH, y: day.y };
   }
 
   blockForm.addEventListener("submit", (event) => {

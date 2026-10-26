@@ -6,9 +6,9 @@
 - **GitHub**：https://github.com/37chengshan/tripblocks
 - **提交 Issue**：https://github.com/modelstudioai/modelstudioai.github.io/issues/203
 - **Demo 视频**：https://github.com/37chengshan/tripblocks/raw/main/docs/demo/tripblocks-demo.mp4
-- **Editorial intro**：`https://37chengshan.github.io/tripblocks/`
-- **Demo workbench**：`https://37chengshan.github.io/tripblocks/demo.html`（只读对话 + 可编辑本地行程图）
-- **Architecture**：`https://37chengshan.github.io/tripblocks/architecture.html`（从实际仓库代码绘制）
+- **Editorial intro**：`site/index.html``https://37chengshan.github.io/tripblocks/`
+- **Demo workbench**：`site/demo.html`（只读对话 + 可编辑本地行程图）
+- **Architecture**：`site/architecture.html`（从实际仓库代码绘制）
 - **演示**：`npm install && npm run dev:all`，打开 `http://127.0.0.1:5173`
 - **核心能力**：7 天模块化 board、跨天拖拽、FlyAI 实时酒店/景点、Wander Managed Agent、路线/预算视图
 - **Agent**：阿里云百炼 Managed Agent（`agent/agents.yaml`），Vault 绑定，前端不接触密钥
